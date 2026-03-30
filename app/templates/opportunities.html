@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Oportunidades · Market Analyzer{% endblock %}
+{% block eyebrow %}Oportunidades{% endblock %}
+{% block page_title %}Señal{% endblock %}
+
+{% block content %}
+<section class="filters glass">
+    <form method="get" class="filters-form">
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="Buscar producto o nombre normalizado" />
+        <select name="source">
+            <option value="">Todos los mercados</option>
+            <option value="ebay" {% if filters.source == "ebay" %}selected{% endif %}>eBay</option>
+        </select>
+        <select name="confidence">
+            <option value="">Cualquier confianza</option>
+            <option value="high" {% if filters.confidence == "high" %}selected{% endif %}>Alta</option>
+            <option value="medium" {% if filters.confidence == "medium" %}selected{% endif %}>Media</option>
+            <option value="low" {% if filters.confidence == "low" %}selected{% endif %}>Baja</option>
+        </select>
+        <input type="number" step="1" name="min_discount" value="{{ filters.min_discount }}" placeholder="Descuento mínimo %" />
+        <input type="number" step="1" name="min_price" value="{{ filters.min_price }}" placeholder="Precio mínimo" />
+        <input type="number" step="1" name="max_price" value="{{ filters.max_price }}" placeholder="Precio máximo" />
+        <label class="check-pill">
+            <input type="checkbox" name="buy_it_now" value="true" {% if filters.buy_it_now == "true" %}checked{% endif %} />
+            <span>Solo compra directa</span>
+        </label>
+        <button type="submit">Aplicar</button>
+    </form>
+</section>
+
+<section class="split-layout">
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Oportunidades</h3>
+            <span class="muted">{{ opportunities|length }} filas</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Ref. mercado</th>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Mercado</th>
+                        <th>Descuento</th>
+                        <th>Comparables</th>
+                        <th>Confianza</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for opportunity in opportunities %}
+                    <tr class="{% if selected_opportunity and selected_opportunity.id == opportunity.id %}is-selected{% endif %}">
+                        <td><a href="/opportunities?opportunity_id={{ opportunity.id }}">{{ opportunity.source }}</a></td>
+                        <td>
+                            <a href="/opportunities?opportunity_id={{ opportunity.id }}">{{ opportunity.title }}</a>
+                            <p class="cell-sub">{{ opportunity.normalized_name }}</p>
+                        </td>
+                        <td>{{ "%.2f"|format(opportunity.buy_price) }} €</td>
+                        <td>{{ "%.2f"|format(opportunity.estimated_sale_price) }} €</td>
+                        <td class="good">{{ "%.2f"|format(opportunity.discount_pct or 0) }}%</td>
+                        <td>{{ opportunity.comparable_count or 0 }}</td>
+                        <td><span class="confidence {{ opportunity.confidence }}">{% if opportunity.confidence == "high" %}alta{% elif opportunity.confidence == "medium" %}media{% elif opportunity.confidence == "low" %}baja{% else %}{{ opportunity.confidence }}{% endif %}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <aside class="panel glass detail-panel">
+        {% if selected_opportunity %}
+        <div class="detail-hero glass-soft">
+            <span class="detail-overline">Oportunidad</span>
+            <h3 class="detail-title">{{ selected_opportunity.title }}</h3>
+            <p class="signal-copy">
+                Compra: <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong><br />
+                Mercado: <strong>{{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</strong><br />
+                <span class="signal-edge">→ Beneficio: +{{ "%.2f"|format(selected_opportunity.expected_profit) }} €</span>
+            </p>
+            <a class="primary-cta" href="{{ selected_opportunity.url }}" target="_blank" rel="noreferrer">
+                <span class="cta-icon">↗</span>
+                <span>Abrir anuncio</span>
+            </a>
+        </div>
+
+        <div class="detail-grid">
+            <div class="detail-card detail-card-featured glass-soft">
+                <span class="metric-label">Precio detectado</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong>
+            </div>
+            <div class="detail-card detail-card-featured glass-soft">
+                <span class="metric-label">Precio de mercado</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</strong>
+            </div>
+            <div class="detail-card detail-card-featured glass-soft">
+                <span class="metric-label">Beneficio estimado</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.expected_profit) }} €</strong>
+            </div>
+            <div class="detail-card detail-card-medium glass-soft">
+                <span class="metric-label">Descuento</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.discount_pct or 0) }}%</strong>
+            </div>
+            <div class="detail-card detail-card-medium glass-soft">
+                <span class="metric-label">Comparables</span>
+                <strong>{{ selected_opportunity.comparable_count or 0 }}</strong>
+            </div>
+            <div class="detail-card detail-card-medium glass-soft">
+                <span class="metric-label">Confianza</span>
+                <strong class="confidence {{ selected_opportunity.confidence }}">{% if selected_opportunity.confidence == "high" %}alta{% elif selected_opportunity.confidence == "medium" %}media{% elif selected_opportunity.confidence == "low" %}baja{% else %}{{ selected_opportunity.confidence }}{% endif %}</strong>
+            </div>
+        </div>
+
+        <article class="evidence-box glass-soft">
+            <h4>Por qué es una oportunidad</h4>
+            <p class="signal-caption">Señal directa, sin ruido.</p>
+            <div class="insight-stack">
+                <p class="insight-line">Compra por <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong></p>
+                <p class="insight-line">Mercado en <strong>{{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</strong></p>
+                <p class="insight-line accent">Beneficio estimado: <strong>+{{ "%.2f"|format(selected_opportunity.expected_profit) }} €</strong></p>
+            </div>
+        </article>
+
+        <article class="evidence-box glass-soft detail-meta-box">
+            <h4>Contexto</h4>
+            <ul class="meta-list meta-list-tight">
+                <li>Métrica: {{ selected_opportunity.metric_name or "mediana" }}</li>
+                <li>Comparables usados: {{ selected_opportunity.comparable_count or 0 }}</li>
+                <li>Consulta: {{ selected_opportunity.search_query or "n/d" }}</li>
+                <li>Formato: {% if selected_opportunity.buy_it_now %}compra directa{% else %}mixto{% endif %}</li>
+                <li>Fuente: {{ selected_opportunity.source }}</li>
+            </ul>
+        </article>
+
+        {% if selected_evidence %}
+        <article class="evidence-box glass-soft">
+            <div class="panel-head">
+                <h4>Evidencia</h4>
+                <a href="/analysis?opportunity_id={{ selected_opportunity.id }}">Ver análisis</a>
+            </div>
+            <ul class="meta-list">
+                <li>Fuentes: {{ selected_evidence.data_sources|join(", ") }}</li>
+                <li>Consultas: {{ selected_evidence.search_queries|join(", ") or "n/d" }}</li>
+                <li>Último comparable: {{ selected_evidence.latest_seen_at or "n/d" }}</li>
+                <li>Variantes descartadas: {{ selected_evidence.discarded_count }}</li>
+            </ul>
+        </article>
+        {% endif %}
+        {% else %}
+        <p class="empty-state">No hay ninguna oportunidad seleccionada.</p>
+        {% endif %}
+    </aside>
+</section>
+{% endblock %}

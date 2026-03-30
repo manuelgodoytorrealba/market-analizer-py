@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Anuncios · Market Analyzer{% endblock %}
+{% block eyebrow %}Anuncios{% endblock %}
+{% block page_title %}Explorador de anuncios{% endblock %}
+
+{% block content %}
+<section class="filters glass">
+    <form method="get" class="filters-form">
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="Buscar título, nombre normalizado o consulta" />
+        <select name="source">
+            <option value="">Todos los mercados</option>
+            <option value="ebay" {% if filters.source == "ebay" %}selected{% endif %}>eBay</option>
+        </select>
+        <select name="active">
+            <option value="">Activos + inactivos</option>
+            <option value="true" {% if filters.active == "true" %}selected{% endif %}>Solo activos</option>
+            <option value="false" {% if filters.active == "false" %}selected{% endif %}>Solo inactivos</option>
+        </select>
+        <input type="number" step="1" name="min_price" value="{{ filters.min_price }}" placeholder="Precio mínimo" />
+        <input type="number" step="1" name="max_price" value="{{ filters.max_price }}" placeholder="Precio máximo" />
+        <button type="submit">Aplicar</button>
+    </form>
+</section>
+
+<section class="split-layout">
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Anuncios</h3>
+            <span class="muted">{{ listings|length }} filas</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Fuente</th>
+                        <th>Consulta</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Última vez</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for listing in listings %}
+                    <tr class="{% if selected_listing and selected_listing.id == listing.id %}is-selected{% endif %}">
+                        <td>
+                            <a href="/listings?listing_id={{ listing.id }}">{{ listing.title }}</a>
+                            <p class="cell-sub">{{ listing.normalized_name }}</p>
+                        </td>
+                        <td>{{ listing.source }}</td>
+                        <td>{{ listing.search_query or "n/d" }}</td>
+                        <td>{{ "%.2f"|format(listing.price) }} €</td>
+                        <td>
+                            <span class="status-pill {% if listing.is_active %}success{% else %}inactive{% endif %}">
+                                {% if listing.is_active %}activo{% else %}inactivo{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ listing.last_seen_at or "n/d" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <aside class="panel glass detail-panel">
+        {% if selected_listing %}
+        <div class="detail-hero glass-soft">
+            <span class="detail-overline">Anuncio</span>
+            <h3 class="detail-title">{{ selected_listing.title }}</h3>
+            <p class="signal-copy">
+                Precio: <strong>{{ "%.2f"|format(selected_listing.price) }} €</strong><br />
+                Estado: <strong>{% if selected_listing.is_active %}activo{% else %}inactivo{% endif %}</strong><br />
+                <span class="signal-edge">→ Fuente: {{ selected_listing.source }}</span>
+            </p>
+            <a class="primary-cta" href="{{ selected_listing.url }}" target="_blank" rel="noreferrer">
+                <span class="cta-icon">↗</span>
+                <span>Abrir anuncio</span>
+            </a>
+        </div>
+
+        <ul class="meta-list meta-list-tight">
+            <li>Nombre normalizado: {{ selected_listing.normalized_name }}</li>
+            <li>Fuente: {{ selected_listing.source }}</li>
+            <li>Consulta: {{ selected_listing.search_query or "n/d" }}</li>
+            <li>Compra directa: {% if selected_listing.buy_it_now %}sí{% else %}no{% endif %}</li>
+            <li>Primera vez: {{ selected_listing.first_seen_at or "n/d" }}</li>
+            <li>Última vez: {{ selected_listing.last_seen_at or "n/d" }}</li>
+        </ul>
+
+        <article class="evidence-box glass-soft">
+            <h4>Inspección</h4>
+            <p>Úsalo para validar si el scraper trae datos limpios.</p>
+        </article>
+
+        <article class="evidence-box glass-soft">
+            <div class="panel-head">
+                <h4>Oportunidades ligadas</h4>
+                <span class="muted">{{ related_opportunities|length }}</span>
+            </div>
+            {% if related_opportunities %}
+            <div class="compact-list">
+                {% for opportunity in related_opportunities %}
+                <a class="compact-row" href="/analysis?opportunity_id={{ opportunity.id }}">
+                    <div>
+                        <strong>{{ "%.2f"|format(opportunity.discount_pct or 0) }}% descuento</strong>
+                        <p>{{ opportunity.comparable_count or 0 }} comparables · {% if opportunity.confidence == "high" %}alta{% elif opportunity.confidence == "medium" %}media{% elif opportunity.confidence == "low" %}baja{% else %}{{ opportunity.confidence }}{% endif %}</p>
+                    </div>
+                    <div class="row-values">
+                        <span>{{ "%.2f"|format(opportunity.expected_profit) }} €</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="muted">No hay oportunidades ligadas a este anuncio.</p>
+            {% endif %}
+        </article>
+        {% else %}
+        <p class="empty-state">No hay ningún anuncio seleccionado.</p>
+        {% endif %}
+    </aside>
+</section>
+{% endblock %}

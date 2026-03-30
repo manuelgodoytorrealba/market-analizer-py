@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Ejecuciones · Market Analyzer{% endblock %}
+{% block eyebrow %}Observabilidad{% endblock %}
+{% block page_title %}Ejecuciones del scraper{% endblock %}
+
+{% block content %}
+<section class="split-layout">
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Historial</h3>
+            <span class="muted">{{ runs|length }} ejecuciones</span>
+        </div>
+        <div class="compact-list">
+            {% for run in runs %}
+            <a class="compact-row {% if selected_run and selected_run.id == run.id %}is-selected{% endif %}" href="/runs?run_id={{ run.id }}">
+                <div>
+                    <strong>Ejecución #{{ run.id }}</strong>
+                    <p>{{ run.source }} · {% if run.status == "success" %}correcta{% elif run.status == "partial_success" %}parcial{% elif run.status == "failed" %}fallida{% elif run.status == "error" %}error{% else %}{{ run.status.replace("_", " ") }}{% endif %}</p>
+                </div>
+                <div class="row-values">
+                    <span>{{ run.listings_seen }} vistos</span>
+                    <span class="{% if run.errors_count %}warn{% else %}good{% endif %}">
+                        {{ run.errors_count }} errores
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </article>
+
+    <aside class="panel glass detail-panel">
+        {% if selected_run %}
+        <div class="panel-head">
+            <h3>Ejecución #{{ selected_run.id }}</h3>
+            <span class="status-pill {{ selected_run.status }}">{% if selected_run.status == "success" %}correcta{% elif selected_run.status == "partial_success" %}parcial{% elif selected_run.status == "failed" %}fallida{% elif selected_run.status == "error" %}error{% else %}{{ selected_run.status.replace("_", " ") }}{% endif %}</span>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-card glass-soft">
+                <span>Anuncios vistos</span>
+                <strong>{{ selected_run.listings_seen }}</strong>
+            </div>
+            <div class="detail-card glass-soft">
+                <span>Insertados</span>
+                <strong>{{ selected_run.inserted }}</strong>
+            </div>
+            <div class="detail-card glass-soft">
+                <span>Actualizados</span>
+                <strong>{{ selected_run.updated }}</strong>
+            </div>
+            <div class="detail-card glass-soft">
+                <span>Desactivados</span>
+                <strong>{{ selected_run.deactivated }}</strong>
+            </div>
+            <div class="detail-card glass-soft">
+                <span>Oportunidades</span>
+                <strong>{{ selected_run.opportunities_generated }}</strong>
+            </div>
+            <div class="detail-card glass-soft">
+                <span>Duración</span>
+                <strong>{{ "%.2f"|format(selected_run.duration_seconds or 0) }} s</strong>
+            </div>
+        </div>
+
+        <article class="evidence-box glass-soft">
+            <h4>Consultas ejecutadas</h4>
+            <div class="tag-grid">
+                {% for query in selected_run_queries %}
+                <span class="meta-pill">{{ query }}</span>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="evidence-box glass-soft">
+            <h4>Notas</h4>
+            <p>{{ selected_run.notes or "No hay notas para esta ejecución." }}</p>
+        </article>
+        {% else %}
+        <p class="empty-state">No hay ninguna ejecución seleccionada.</p>
+        {% endif %}
+    </aside>
+</section>
+{% endblock %}

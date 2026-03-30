@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Resumen · Market Analyzer{% endblock %}
+{% block eyebrow %}Resumen{% endblock %}
+{% block page_title %}Vista general{% endblock %}
+
+{% block content %}
+<section class="hero glass">
+    <div>
+        <p class="hero-kicker">Estado</p>
+        <h3>Una vista rápida del mercado, la señal y la salud del scraping.</h3>
+    </div>
+    <div class="hero-inline">
+        {% if latest_run %}
+        <span class="status-pill {{ latest_run.status }}">
+            {% if latest_run.status == "success" %}correcta
+            {% elif latest_run.status == "partial_success" %}parcial
+            {% elif latest_run.status == "failed" %}fallida
+            {% elif latest_run.status == "error" %}error
+            {% else %}{{ latest_run.status.replace("_", " ") }}{% endif %}
+        </span>
+        <span class="hero-note">{{ latest_run.opportunities_generated }} oportunidades en la última ejecución</span>
+        {% else %}
+        <span class="hero-note">Todavía no hay ejecuciones registradas</span>
+        {% endif %}
+    </div>
+</section>
+
+<section class="stats-grid">
+    {% for stat in stats %}
+    <article class="metric-card glass tone-{{ stat.tone }}">
+        <p>
+            {% if stat.label == "Active listings" %}Anuncios activos
+            {% elif stat.label == "Stored opportunities" %}Oportunidades guardadas
+            {% elif stat.label == "Latest run candidates" %}Candidatos de la última ejecución
+            {% elif stat.label == "Listings updated" %}Anuncios actualizados
+            {% elif stat.label == "Listings deactivated" %}Anuncios desactivados
+            {% elif stat.label == "Recent errors" %}Errores recientes
+            {% else %}{{ stat.label }}{% endif %}
+        </p>
+        <strong>{{ stat.value }}</strong>
+    </article>
+    {% endfor %}
+</section>
+
+<section class="content-grid">
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Mejores oportunidades</h3>
+            <a href="/opportunities">Ver todo</a>
+        </div>
+        {% if top_opportunities %}
+        <div class="compact-list">
+            {% for opportunity in top_opportunities %}
+            <a class="compact-row" href="/opportunities?opportunity_id={{ opportunity.id }}">
+                <div>
+                    <strong>{{ opportunity.title }}</strong>
+                    <p>{{ opportunity.source }} · {{ opportunity.comparable_count or 0 }} comparables</p>
+                </div>
+                <div class="row-values">
+                    <span>{{ "%.2f"|format(opportunity.buy_price) }} €</span>
+                    <span class="good">{{ "%.2f"|format(opportunity.discount_pct or 0) }}%</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="panel-empty glass-soft">
+            <strong>Aún no hay oportunidades</strong>
+            <p>Ejecuta el scraper para poblar la señal y la evidencia.</p>
+        </div>
+        {% endif %}
+    </article>
+
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Fuentes</h3>
+            <span class="muted">Anuncios activos por mercado</span>
+        </div>
+        {% if source_breakdown %}
+        <div class="stack-list">
+            {% for source, count in source_breakdown %}
+            <div class="stack-row">
+                <span>{{ source }}</span>
+                <strong>{{ count }}</strong>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="panel-empty glass-soft">
+            <strong>Sin datos de fuentes</strong>
+            <p>Los anuncios activos aparecerán aquí tras la primera ejecución correcta.</p>
+        </div>
+        {% endif %}
+    </article>
+</section>
+
+<section class="content-grid">
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Distribución de confianza</h3>
+            <span class="muted">Qué tan sólida se ve la señal</span>
+        </div>
+        {% if confidence_breakdown %}
+        <div class="stack-list">
+            {% for confidence, count in confidence_breakdown %}
+            <div class="stack-row">
+                <span class="confidence {{ confidence }}">
+                    {% if confidence == "high" %}alta
+                    {% elif confidence == "medium" %}media
+                    {% elif confidence == "low" %}baja
+                    {% else %}{{ confidence }}{% endif %}
+                </span>
+                <strong>{{ count }}</strong>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="panel-empty glass-soft">
+            <strong>Sin datos de confianza</strong>
+            <p>Los niveles aparecerán cuando se generen oportunidades.</p>
+        </div>
+        {% endif %}
+    </article>
+
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Anuncios recientes</h3>
+            <a href="/listings">Ver datos</a>
+        </div>
+        {% if recent_listings %}
+        <div class="compact-list">
+            {% for listing in recent_listings %}
+            <a class="compact-row" href="/listings?listing_id={{ listing.id }}">
+                <div>
+                    <strong>{{ listing.title }}</strong>
+                    <p>{{ listing.search_query or "sin consulta" }} · {{ listing.source }}</p>
+                </div>
+                <div class="row-values">
+                    <span>{{ "%.2f"|format(listing.price) }} €</span>
+                    <span class="{% if listing.is_active %}good{% else %}muted{% endif %}">
+                        {% if listing.is_active %}activo{% else %}inactivo{% endif %}
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="panel-empty glass-soft">
+            <strong>Sin anuncios cargados</strong>
+            <p>El explorador se activará después de la primera ejecución.</p>
+        </div>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Market Analyzer{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}" />
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar glass">
+            <div class="brand">
+                <div class="brand-mark">MA</div>
+                <div>
+                    <p class="eyebrow">Motor de decisión</p>
+                    <h1>Market Analyzer</h1>
+                </div>
+            </div>
+
+            <nav class="nav-list">
+                {% for nav_item in nav_items %}
+                <a href="{{ nav_item.href }}" class="nav-link {% if active_page == nav_item.key %}is-active{% endif %}">
+                    <span>
+                        {% if nav_item.key == "overview" %}Resumen
+                        {% elif nav_item.key == "opportunities" %}Oportunidades
+                        {% elif nav_item.key == "listings" %}Anuncios
+                        {% elif nav_item.key == "analysis" %}Evidencia
+                        {% elif nav_item.key == "runs" %}Ejecuciones
+                        {% elif nav_item.key == "settings" %}Ajustes
+                        {% else %}{{ nav_item.label }}{% endif %}
+                    </span>
+                </a>
+                {% endfor %}
+            </nav>
+
+            <div class="sidebar-note glass-soft">
+                <p class="eyebrow">Objetivo</p>
+                <p>Menos ruido, mejor señal, decisiones más rápidas.</p>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <header class="topbar glass">
+                <div>
+                    <p class="eyebrow">{% block eyebrow %}Inteligencia de mercado{% endblock %}</p>
+                    <h2>{% block page_title %}Panel{% endblock %}</h2>
+                </div>
+                <div class="topbar-meta">
+                    <span class="meta-pill">Flujo claro</span>
+                    <span class="meta-pill">Señal explicable</span>
+                </div>
+            </header>
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+
+</html>

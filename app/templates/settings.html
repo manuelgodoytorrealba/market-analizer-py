@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Ajustes · Market Analyzer{% endblock %}
+{% block eyebrow %}Configuración{% endblock %}
+{% block page_title %}Ajustes de ejecución{% endblock %}
+
+{% block content %}
+<section class="panel glass settings-panel">
+    <div class="panel-head">
+        <h3>Entorno actual</h3>
+        <span class="muted">Valores efectivos</span>
+    </div>
+    <div class="settings-grid">
+        {% for label, value in settings_items %}
+        <div class="settings-row glass-soft">
+            <span>
+                {% if label == "Database URL" %}Base de datos
+                {% elif label == "Request timeout" %}Timeout
+                {% elif label == "HTTP retries" %}Reintentos HTTP
+                {% elif label == "Backoff seconds" %}Backoff
+                {% elif label == "User agent" %}User agent
+                {% elif label == "Buy it now only" %}Solo compra directa
+                {% elif label == "Items per query" %}Items por consulta
+                {% else %}{{ label }}{% endif %}
+            </span>
+            <strong>{{ value }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
