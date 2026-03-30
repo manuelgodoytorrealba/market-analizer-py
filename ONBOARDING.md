@@ -549,3 +549,169 @@ Tu objetivo ahora no es reescribir el sistema.
 
 Tu objetivo es demostrar que entiendes cómo funciona y que puedes hacer una mejora pequeña, correcta y útil.
 
+---
+
+## 13. Flujo de trabajo en GitHub
+
+Este proyecto **no se trabaja directamente sobre `main`**.
+
+`main` es la rama protegida. Ahí solo entra código revisado.
+
+### Regla principal
+
+Nunca hagas:
+
+```bash
+git checkout main
+git commit
+git push origin main
+```
+
+Ese no es el flujo correcto.
+
+### Flujo correcto
+
+Para cualquier tarea nueva:
+
+1. Ponte al día con la rama base.
+2. Crea una rama de trabajo.
+3. Haz tus cambios ahí.
+4. Sube esa rama.
+5. Abre un Pull Request.
+6. Espera revisión y aprobación antes de mergear.
+
+### Ramas base actuales
+
+Hoy existen estas ramas:
+
+- `main`
+- `develop`
+- `feature/junior-compra-directa`
+- `feature/wallapop`
+- `chore/ui-polish`
+
+### Qué rama debes usar tú
+
+Para tu primera tarea usa una rama nueva derivada de `develop`.
+
+Ejemplo:
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/filtro-compra-directa-listings
+```
+
+### Comandos de trabajo recomendados
+
+Antes de empezar:
+
+```bash
+git checkout develop
+git pull origin develop
+```
+
+Crear rama nueva:
+
+```bash
+git checkout -b feature/nombre-corto-de-la-tarea
+```
+
+Ver cambios:
+
+```bash
+git status
+```
+
+Guardar cambios:
+
+```bash
+git add .
+git commit -m "Describe el cambio con claridad"
+```
+
+Subir rama:
+
+```bash
+git push -u origin feature/nombre-corto-de-la-tarea
+```
+
+### Cómo abrir el Pull Request
+
+Cuando tu rama esté subida:
+
+1. Entra al repo en GitHub.
+2. GitHub te sugerirá abrir un PR.
+3. La base debe ser:
+   - normalmente `main`
+   - o `develop` si te lo pedimos explícitamente para una iteración concreta
+4. El título del PR debe describir bien el cambio.
+5. En la descripción debes explicar:
+   - qué hiciste
+   - cómo lo probaste
+   - qué no tocaste
+
+### Regla de seguridad
+
+No hagas merge tú mismo.
+
+El flujo correcto es:
+
+- tú implementas
+- tú abres PR
+- se revisa
+- Manuel aprueba
+- luego se mergea
+
+### Qué pasa si quieres seguir trabajando sobre una tarea
+
+Si el PR aún no se ha mergeado, sigue trabajando en la misma rama y vuelve a hacer:
+
+```bash
+git add .
+git commit -m "Ajusta el mensaje al cambio"
+git push
+```
+
+GitHub actualizará el PR automáticamente.
+
+### Qué no debes hacer
+
+No hagas estas cosas sin pedirlo antes:
+
+- push directo a `main`
+- force push
+- borrar ramas ajenas
+- reescribir historial
+- mezclar varias tareas distintas en una sola rama
+
+### Convención de nombres de ramas
+
+Usa nombres claros y cortos:
+
+- `feature/filtro-compra-directa-listings`
+- `feature/mejora-copy-overview`
+- `chore/ajuste-estilos-tabla`
+- `fix/filtro-listings-buy-now`
+
+Evita nombres vagos como:
+
+- `prueba`
+- `cosas`
+- `cambios-finales`
+- `rama-nueva`
+
+### Qué esperamos en un PR bueno
+
+Un PR bueno en este proyecto:
+
+- toca una sola cosa principal
+- tiene cambios fáciles de revisar
+- explica cómo se probó
+- no mezcla refactor + feature + diseño a la vez
+
+### Tu primera norma práctica
+
+Si dudas entre “hacer más” o “hacerlo más claro”, elige siempre hacerlo más claro.
+
+En este proyecto preferimos cambios pequeños, entendibles y revisables.
