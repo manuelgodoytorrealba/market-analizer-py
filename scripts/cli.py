@@ -156,7 +156,7 @@ def _run_repair_wallapop_urls(_: argparse.Namespace) -> int:
             if expected_url:
                 listing_url_by_id[listing_id] = expected_url
             if expected_url and current_url != expected_url:
-                listing.url = expected_url
+                setattr(listing, "url", expected_url)
                 updated_listings += 1
 
         opportunities = db.query(Opportunity).filter(Opportunity.source == "wallapop").all()
@@ -165,7 +165,7 @@ def _run_repair_wallapop_urls(_: argparse.Namespace) -> int:
             current_url = cast(str, opportunity.url)
             expected_url = listing_url_by_id.get(listing_id)
             if expected_url and current_url != expected_url:
-                opportunity.url = expected_url
+                setattr(opportunity, "url", expected_url)
                 updated_opportunities += 1
         db.commit()
     finally:
