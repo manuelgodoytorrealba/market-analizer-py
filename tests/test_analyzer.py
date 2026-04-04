@@ -1,7 +1,12 @@
 import unittest
 
 from app.models import Listing
-from app.services.analyzer import ARBITRAGE_OPPORTUNITY_TYPE, GENERIC_OPPORTUNITY_TYPE, analyze_opportunities
+from app.services.analyzer import (
+    ARBITRAGE_OPPORTUNITY_TYPE,
+    GENERIC_OPPORTUNITY_TYPE,
+    WALLAPOP_MARKET_OPPORTUNITY_TYPE,
+    analyze_opportunities,
+)
 from app.services.normalizer import extract_iphone_specs
 
 
@@ -307,6 +312,69 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(opportunity.comparable_count, 3)
         self.assertEqual(opportunity.liquidity_count, 3)
         self.assertEqual(opportunity.estimated_resale_price, 680.0)
+        self.assertGreater(opportunity.profit_estimate, 20.0)
+
+    def test_analyzer_generates_wallapop_market_gap_without_ebay(self) -> None:
+        listings = [
+            Listing(
+                id=101,
+                source="wallapop",
+                external_id="w101",
+                title="iPhone 13 128GB azul",
+                normalized_name="iphone 13 128gb",
+                price=165.0,
+                shipping_cost=7.0,
+                url="https://example.com/w101",
+                is_active=True,
+            ),
+            Listing(
+                id=102,
+                source="wallapop",
+                external_id="w102",
+                title="iPhone 13 128GB negro",
+                normalized_name="iphone 13 128gb",
+                price=250.0,
+                shipping_cost=7.0,
+                url="https://example.com/w102",
+                is_active=True,
+            ),
+            Listing(
+                id=103,
+                source="wallapop",
+                external_id="w103",
+                title="iPhone 13 128GB blanco",
+                normalized_name="iphone 13 128gb",
+                price=260.0,
+                shipping_cost=7.0,
+                url="https://example.com/w103",
+                is_active=True,
+            ),
+            Listing(
+                id=104,
+                source="wallapop",
+                external_id="w104",
+                title="iPhone 13 128GB rojo",
+                normalized_name="iphone 13 128gb",
+                price=255.0,
+                shipping_cost=7.0,
+                url="https://example.com/w104",
+                is_active=True,
+            ),
+        ]
+
+        opportunities = analyze_opportunities(listings)
+        wallapop_opportunities = [
+            opportunity
+            for opportunity in opportunities
+            if opportunity.opportunity_type == WALLAPOP_MARKET_OPPORTUNITY_TYPE
+        ]
+
+        self.assertEqual(len(wallapop_opportunities), 1)
+        opportunity = wallapop_opportunities[0]
+        self.assertEqual(opportunity.source, "wallapop")
+        self.assertEqual(opportunity.source_listing_id, 101)
+        self.assertEqual(opportunity.comparable_count, 3)
+        self.assertEqual(opportunity.estimated_resale_price, 255.0)
         self.assertGreater(opportunity.profit_estimate, 20.0)
 
 

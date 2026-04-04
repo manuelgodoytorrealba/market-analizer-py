@@ -9,6 +9,7 @@ from app.services.normalizer import build_comparable_key, extract_iphone_specs
 
 SHIPPING_ESTIMATE_EUR = 10.0
 GENERIC_OPPORTUNITY_TYPE = "generic_market_gap"
+WALLAPOP_MARKET_OPPORTUNITY_TYPE = "wallapop_market_gap"
 ARBITRAGE_OPPORTUNITY_TYPE = "wallapop_to_ebay_arbitrage"
 
 
@@ -27,6 +28,7 @@ def analyze_opportunities(listings: Iterable[Listing]) -> list[Opportunity]:
 
     found_opportunities: list[Opportunity] = []
     found_opportunities.extend(_analyze_generic_opportunities(grouped, group_specs))
+    found_opportunities.extend(_analyze_wallapop_market_opportunities(grouped, group_specs))
     found_opportunities.extend(_analyze_wallapop_to_ebay_arbitrage(grouped, group_specs))
     found_opportunities.sort(key=lambda x: x.score, reverse=True)
     return found_opportunities
@@ -64,6 +66,49 @@ def _analyze_generic_opportunities(
                 metric_name="median_profit",
                 reference_source="mixed_market",
                 liquidity_count=len(generic_items),
+            )
+            if opportunity is not None:
+                opportunities.append(opportunity)
+
+    return opportunities
+
+
+def _analyze_wallapop_market_opportunities(
+    grouped: dict[str, list[Listing]],
+    group_specs: dict[str, dict[str, str]],
+) -> list[Opportunity]:
+    settings = get_settings()
+    opportunities: list[Opportunity] = []
+
+    for comparable_key, items in grouped.items():
+        wallapop_items = [item for item in items if item.source == "wallapop"]
+        if len(wallapop_items) < settings.arbitrage_min_comparables:
+            continue
+
+        specs = group_specs[comparable_key]
+
+        for item in wallapop_items:
+            comparables = [candidate for candidate in wallapop_items if candidate.id != item.id]
+            if len(comparables) < settings.arbitrage_min_comparables:
+                continue
+
+            prices = sorted(float(candidate.price) for candidate in comparables if candidate.price is not None)
+            if len(prices) < settings.arbitrage_min_comparables:
+                continue
+
+            wallapop_reference_price = float(median(prices))
+            opportunity = _build_opportunity(
+                item=item,
+                comparable_key=comparable_key,
+                specs=specs,
+                reference_price=wallapop_reference_price,
+                comparables=comparables,
+                fee_rate=0.0,
+                min_profit=settings.arbitrage_profit_threshold,
+                opportunity_type=WALLAPOP_MARKET_OPPORTUNITY_TYPE,
+                metric_name="wallapop_market_gap",
+                reference_source="wallapop",
+                liquidity_count=len(comparables),
             )
             if opportunity is not None:
                 opportunities.append(opportunity)
