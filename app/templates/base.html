@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% if auto_refresh_seconds %}
+    <meta http-equiv="refresh" content="{{ auto_refresh_seconds }}">
+    {% endif %}
     <title>{% block title %}Market Analyzer{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}" />
 </head>
@@ -50,12 +53,28 @@
                 <div class="topbar-meta">
                     <span class="meta-pill">Flujo claro</span>
                     <span class="meta-pill">Señal explicable</span>
+                    {% if runtime_interval_seconds %}
+                    <span class="meta-pill">Loop {{ runtime_interval_seconds }} s</span>
+                    {% endif %}
                 </div>
             </header>
 
             {% block content %}{% endblock %}
         </main>
     </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const autoSubmitForms = document.querySelectorAll("form[data-auto-submit='true']");
+        autoSubmitForms.forEach(function (form) {
+            const controls = form.querySelectorAll("select, input[type='checkbox']");
+            controls.forEach(function (control) {
+                control.addEventListener("change", function () {
+                    form.submit();
+                });
+            });
+        });
+    });
+</script>
 </body>
 
 </html>

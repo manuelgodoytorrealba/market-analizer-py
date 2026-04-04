@@ -19,7 +19,7 @@
                     <p>{{ run.source }} · {% if run.status == "success" %}correcta{% elif run.status == "partial_success" %}parcial{% elif run.status == "failed" %}fallida{% elif run.status == "error" %}error{% else %}{{ run.status.replace("_", " ") }}{% endif %}</p>
                 </div>
                 <div class="row-values">
-                    <span>{{ run.listings_seen }} vistos</span>
+                    <span>{{ run.listings_seen }} encontrados / {{ run.listings_normalized or 0 }} válidos</span>
                     <span class="{% if run.errors_count %}warn{% else %}good{% endif %}">
                         {{ run.errors_count }} errores
                     </span>
@@ -37,8 +37,12 @@
         </div>
         <div class="detail-grid">
             <div class="detail-card glass-soft">
-                <span>Anuncios vistos</span>
+                <span>Listings encontrados</span>
                 <strong>{{ selected_run.listings_seen }}</strong>
+            </div>
+            <div class="detail-card glass-soft">
+                <span>Listings válidos</span>
+                <strong>{{ selected_run.listings_normalized or 0 }}</strong>
             </div>
             <div class="detail-card glass-soft">
                 <span>Insertados</span>
@@ -74,6 +78,11 @@
         <article class="evidence-box glass-soft">
             <h4>Notas</h4>
             <p>{{ selected_run.notes or "No hay notas para esta ejecución." }}</p>
+        </article>
+
+        <article class="evidence-box glass-soft">
+            <h4>Error</h4>
+            <p>{{ selected_run.error_message or "Sin error fatal en este ciclo." }}</p>
         </article>
         {% else %}
         <p class="empty-state">No hay ninguna ejecución seleccionada.</p>

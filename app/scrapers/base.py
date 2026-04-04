@@ -1,7 +1,12 @@
 from abc import ABC, abstractmethod
 
 
-class BaseScraper(ABC):
+class BaseListingProvider(ABC):
     @abstractmethod
-    def scrape(self, query: str) -> list[dict]:
+    def fetch_listings(self, query: str) -> list[dict]:
         raise NotImplementedError
+
+
+class BaseScraper(BaseListingProvider):
+    def scrape(self, query: str) -> list[dict]:
+        return self.fetch_listings(query)

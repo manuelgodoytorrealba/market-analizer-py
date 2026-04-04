@@ -4,7 +4,7 @@ from scripts.cli import main as cli_main
 
 
 def main() -> None:
-    raise SystemExit(cli_main(["once", *sys.argv[1:]]))
+    raise SystemExit(cli_main(["runtime", *sys.argv[1:]]))
 
 
 if __name__ == "__main__":

@@ -4,19 +4,94 @@ from pathlib import Path
 import re
 import time
 from urllib.parse import quote
+from collections import Counter
 
 import requests
 from bs4 import BeautifulSoup
 
 from app.config import get_settings
 from app.scrapers.base import BaseScraper
-from app.services.normalizer import build_normalized_name
+from app.scrapers.ebay_api import EbayAPIProvider
+from app.services.normalizer import extract_iphone_specs, infer_condition
 
 
 logger = logging.getLogger(__name__)
 
 
-class EbayScraper(BaseScraper):
+EU_COUNTRY_KEYWORDS = {
+    "spain": "ES",
+    "espana": "ES",
+    "españa": "ES",
+    "madrid": "ES",
+    "barcelona": "ES",
+    "valencia": "ES",
+    "sevilla": "ES",
+    "france": "EU",
+    "francia": "EU",
+    "germany": "EU",
+    "alemania": "EU",
+    "italy": "EU",
+    "italia": "EU",
+    "portugal": "EU",
+    "netherlands": "EU",
+    "paises bajos": "EU",
+    "belgium": "EU",
+    "belgica": "EU",
+    "austria": "EU",
+    "ireland": "EU",
+    "irlanda": "EU",
+    "poland": "EU",
+    "polonia": "EU",
+    "sweden": "EU",
+    "suecia": "EU",
+    "denmark": "EU",
+    "dinamarca": "EU",
+    "finland": "EU",
+    "finlandia": "EU",
+    "czech": "EU",
+    "chequia": "EU",
+    "romania": "EU",
+    "greece": "EU",
+    "grecia": "EU",
+    "hungary": "EU",
+    "hungria": "EU",
+    "croatia": "EU",
+    "croacia": "EU",
+    "slovakia": "EU",
+    "slovenia": "EU",
+    "luxembourg": "EU",
+    "luxemburgo": "EU",
+    "lithuania": "EU",
+    "latvia": "EU",
+    "estonia": "EU",
+    "bulgaria": "EU",
+}
+
+EXCLUDED_REGION_KEYWORDS = {
+    "canada",
+    "united states",
+    "usa",
+    "u.s.",
+    "japan",
+    "china",
+    "hong kong",
+    "singapore",
+    "korea",
+    "india",
+    "taiwan",
+    "vietnam",
+    "thailand",
+    "malaysia",
+    "philippines",
+}
+
+SHIPPING_COST_BY_REGION = {
+    "local": 5.0,
+    "eu": 12.5,
+}
+
+
+class EbayHTMLScraper(BaseScraper):
     def __init__(
         self,
         *,
@@ -42,6 +117,9 @@ class EbayScraper(BaseScraper):
         }
 
         self.bad_title_keywords = [
+            "broken",
+            "defective",
+            "icloud locked",
             "pieza",
             "piezas",
             "repuesto",
@@ -58,6 +136,7 @@ class EbayScraper(BaseScraper):
             "caja vacia",
             "box only",
             "manual only",
+            "for parts",
         ]
         self.auction_keywords = [
             "subasta",
@@ -77,7 +156,7 @@ class EbayScraper(BaseScraper):
             "challengeget",
         ]
 
-    def scrape(self, query: str) -> list[dict]:
+    def fetch_listings(self, query: str) -> list[dict]:
         result = self.debug_scrape(query)
         return result["results"]
 
@@ -112,6 +191,28 @@ class EbayScraper(BaseScraper):
                 title,
             )
 
+        if self._is_challenge_page(html):
+            saved_path = self._save_debug_html(query, html, "mobile" if used_mobile_fallback else "desktop")
+            logger.error(
+                "ebay search blocked_by_challenge query=%s host=%s path=%s",
+                query,
+                "mobile" if used_mobile_fallback else "desktop",
+                saved_path,
+            )
+            return {
+                "query": query,
+                "saved_path": str(saved_path),
+                "page_title": title,
+                "used_mobile_fallback": used_mobile_fallback,
+                "strategy_counts": {"mobile_cards": 0, "regex_urls": 0},
+                "raw_candidates": 0,
+                "auction_filtered": 0,
+                "invalid_filtered": 1,
+                "discard_reasons": {"challenge_blocked": 1},
+                "quality_signals": {"challenge_blocked": 1},
+                "results": [],
+            }
+
         saved_path = self._save_debug_html(query, html, "mobile" if used_mobile_fallback else "desktop")
         logger.info("ebay search html_saved query=%s path=%s", query, saved_path)
 
@@ -128,62 +229,92 @@ class EbayScraper(BaseScraper):
         candidates = extraction["candidates"]
 
         results: list[dict] = []
-        auction_filtered = 0
-        invalid_filtered = 0
+        discard_reasons: Counter[str] = Counter()
 
         for candidate in candidates[: self.settings.ebay_search_max_items]:
             try:
                 url = str(candidate["url"])
                 if not self._is_valid_item(url):
-                    invalid_filtered += 1
+                    discard_reasons["invalid_item_url"] += 1
                     continue
 
                 title = str(candidate.get("title") or "").strip()
                 price = candidate.get("price")
+                detail = self._fetch_item_detail(url)
+                if not detail:
+                    discard_reasons["detail_unavailable"] += 1
+                    continue
+                seller_location = str(detail.get("seller_location") or candidate.get("location") or "")
+                shipping_region = self._classify_shipping_region(seller_location)
+                shipping_cost = self._estimate_shipping_cost(
+                    seller_location,
+                    soup=None,
+                    html="",
+                    parsed_shipping=detail.get("shipping_cost"),
+                )
+
+                if detail["is_auction"] and not relax_filters:
+                    discard_reasons["auction_listing"] += 1
+                    continue
+                if detail["currency"] != "EUR":
+                    discard_reasons["non_eur_currency"] += 1
+                    continue
+                if shipping_region == "international":
+                    discard_reasons["outside_target_region"] += 1
+                    continue
+
+                title = str(detail["title"] or title)
+                price = detail["price"] if detail["price"] is not None else price
                 if not title or price is None:
-                    detail = self._fetch_item_detail(url)
-                    if not detail:
-                        invalid_filtered += 1
-                        continue
-                    if detail["is_auction"] and not relax_filters:
-                        auction_filtered += 1
-                        continue
-                    title = str(detail["title"])
-                    price = detail["price"]
+                    discard_reasons["missing_title_or_price"] += 1
+                    continue
 
                 if self._is_auction_listing(
                     title,
                     str(candidate.get("raw_text") or candidate.get("subtitle") or ""),
                 ) and not relax_filters:
-                    auction_filtered += 1
+                    discard_reasons["auction_listing"] += 1
                     continue
 
                 if not self._is_valid_listing(title, float(price)):
-                    invalid_filtered += 1
+                    discard_reasons["invalid_listing"] += 1
+                    continue
+
+                iphone_specs = extract_iphone_specs(title, fallback_query=query)
+                if iphone_specs is None:
+                    discard_reasons["unsupported_model"] += 1
                     continue
 
                 results.append(
                     {
                         "source": "ebay",
-                        "external_id": url,
+                        "external_id": self._build_external_id(url),
                         "title": title,
-                        "normalized_name": build_normalized_name(title, fallback_query=query),
+                        "normalized_name": iphone_specs["normalized_name"],
                         "search_query": query,
+                        "condition": str(detail.get("condition") or infer_condition(title, fallback_query=query) or ""),
+                        "shipping_cost": shipping_cost,
+                        "shipping_region": shipping_region,
                         "buy_it_now": bool(candidate.get("buy_it_now", self.settings.ebay_buy_it_now_only)),
                         "price": float(price),
                         "url": url,
                         "location": str(candidate.get("location") or "Unknown"),
+                        "seller_location": seller_location,
                     }
                 )
             except Exception as exc:
+                discard_reasons["detail_error"] += 1
                 logger.warning("ebay detail error query=%s error=%s", query, exc)
                 continue
 
         logger.info(
-            "ebay search filtered_candidates query=%s auction_filtered=%s invalid_filtered=%s",
+            (
+                "ebay search filtered_candidates query=%s discarded=%s "
+                "discard_reasons=%s"
+            ),
             query,
-            auction_filtered,
-            invalid_filtered,
+            sum(discard_reasons.values()),
+            dict(discard_reasons),
         )
         logger.info("ebay search valid_results query=%s valid_results=%s", query, len(results))
         return {
@@ -193,8 +324,10 @@ class EbayScraper(BaseScraper):
             "used_mobile_fallback": used_mobile_fallback,
             "strategy_counts": strategy_counts,
             "raw_candidates": len(candidates),
-            "auction_filtered": auction_filtered,
-            "invalid_filtered": invalid_filtered,
+            "auction_filtered": discard_reasons.get("auction_listing", 0),
+            "invalid_filtered": sum(discard_reasons.values()) - discard_reasons.get("auction_listing", 0),
+            "discard_reasons": dict(discard_reasons),
+            "quality_signals": {},
             "results": results,
         }
 
@@ -266,14 +399,24 @@ class EbayScraper(BaseScraper):
 
         title = self._extract_title(soup)
         price = self._extract_price(soup, response.text)
+        currency = self._extract_currency(soup, response.text)
+        seller_location = self._extract_seller_location(soup, response.text)
+        shipping_region = self._classify_shipping_region(seller_location)
+        shipping_cost = self._estimate_shipping_cost(seller_location, soup, response.text)
+        condition = self._extract_condition(soup, response.text)
         is_auction = self._is_auction_listing(title or "", response.text)
 
-        if not title or price is None:
+        if not title or price is None or currency is None or shipping_region == "international":
             return None
 
         return {
             "title": title,
             "price": price,
+            "currency": currency,
+            "seller_location": seller_location,
+            "shipping_region": shipping_region,
+            "shipping_cost": shipping_cost,
+            "condition": condition,
             "is_auction": is_auction,
         }
 
@@ -359,6 +502,93 @@ class EbayScraper(BaseScraper):
                     return parsed
 
         return None
+
+    def _extract_currency(self, soup: BeautifulSoup, html: str) -> str | None:
+        currency_meta = soup.select_one('meta[property="product:price:currency"]')
+        if currency_meta is not None:
+            content = currency_meta.get("content")
+            if content:
+                return str(content).strip().upper()
+
+        lowered = html.lower()
+        if " gbp" in lowered or "£" in html:
+            return "GBP"
+        if " usd" in lowered or "us $" in lowered:
+            return "USD"
+        if "approximately" in lowered and "eur" in lowered:
+            return "EUR"
+        if " eur" in lowered or "€" in html:
+            return "EUR"
+        return None
+
+    def _extract_shipping_cost(self, soup: BeautifulSoup, html: str) -> float | None:
+        text = soup.get_text(" ", strip=True)
+        lowered = text.lower()
+        if "free shipping" in lowered or "envío gratis" in lowered:
+            return 0.0
+
+        patterns = [
+            r"(?:env[ií]o|shipping)[^0-9]{0,40}([0-9]+(?:[.,][0-9]+)?)\s*(?:eur|€)",
+            r"([0-9]+(?:[.,][0-9]+)?)\s*(?:eur|€)[^a-z]{0,30}(?:shipping|env[ií]o)",
+            r"approx\.\s*([0-9]+(?:[.,][0-9]+)?)\s*eur[^a-z]{0,30}(?:shipping|env[ií]o)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, lowered, flags=re.IGNORECASE)
+            if not match:
+                continue
+            parsed = self._parse_price(match.group(1))
+            if parsed is not None:
+                return parsed
+        return None
+
+    def _extract_seller_location(self, soup: BeautifulSoup, html: str) -> str:
+        text = soup.get_text(" ", strip=True)
+        patterns = [
+            r"ubicado en:\s*([^\.|]+)",
+            r"located in:\s*([^\.|]+)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                return match.group(1).strip(" ,-")
+        return ""
+
+    def _extract_condition(self, soup: BeautifulSoup, html: str) -> str | None:
+        text = soup.get_text(" ", strip=True)
+        return infer_condition(text)
+
+    def _classify_shipping_region(self, seller_location: str) -> str:
+        lowered = seller_location.lower()
+        if not lowered:
+            return "international"
+        if any(keyword in lowered for keyword in EXCLUDED_REGION_KEYWORDS):
+            return "international"
+        for keyword, region in EU_COUNTRY_KEYWORDS.items():
+            if keyword in lowered:
+                return "local" if region == "ES" else "eu"
+        return "international"
+
+    def _estimate_shipping_cost(
+        self,
+        seller_location: str,
+        soup: BeautifulSoup | None,
+        html: str,
+        parsed_shipping: float | None = None,
+    ) -> float | None:
+        shipping_region = self._classify_shipping_region(seller_location)
+        if shipping_region == "international":
+            return None
+        if parsed_shipping is None and soup is not None:
+            parsed_shipping = self._extract_shipping_cost(soup, html)
+        if parsed_shipping is not None and parsed_shipping <= 25:
+            return parsed_shipping
+        return SHIPPING_COST_BY_REGION[shipping_region]
+
+    def _build_external_id(self, url: str) -> str:
+        match = re.search(r"/itm/(?:[^/]+/)?(\d+)", url)
+        if match:
+            return match.group(1)
+        return url
 
     def _extract_price_from_jsonld(self, data: object) -> float | None:
         if isinstance(data, list):
@@ -547,3 +777,13 @@ class EbayScraper(BaseScraper):
             "location": location,
             "buy_it_now": "buy it now" in text.lower() or self.settings.ebay_buy_it_now_only,
         }
+
+
+EbayScraper = EbayHTMLScraper
+
+
+def build_ebay_provider():
+    settings = get_settings()
+    if settings.ebay_provider == "api":
+        return EbayAPIProvider()
+    return EbayHTMLScraper()

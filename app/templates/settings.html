@@ -15,6 +15,9 @@
         <div class="settings-row glass-soft">
             <span>
                 {% if label == "Database URL" %}Base de datos
+                {% elif label == "Runtime interval" %}Intervalo runtime
+                {% elif label == "Dashboard refresh" %}Refresco dashboard
+                {% elif label == "Log level" %}Nivel de logs
                 {% elif label == "Request timeout" %}Timeout
                 {% elif label == "HTTP retries" %}Reintentos HTTP
                 {% elif label == "Backoff seconds" %}Backoff

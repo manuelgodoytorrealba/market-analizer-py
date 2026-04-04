@@ -6,11 +6,12 @@
 
 {% block content %}
 <section class="filters glass">
-    <form method="get" class="filters-form">
+    <form method="get" class="filters-form" data-auto-submit="true">
         <input type="text" name="q" value="{{ filters.q }}" placeholder="Buscar título, nombre normalizado o consulta" />
         <select name="source">
             <option value="">Todos los mercados</option>
             <option value="ebay" {% if filters.source == "ebay" %}selected{% endif %}>eBay</option>
+            <option value="wallapop" {% if filters.source == "wallapop" %}selected{% endif %}>Wallapop</option>
         </select>
         <select name="active">
             <option value="">Activos + inactivos</option>
@@ -45,7 +46,7 @@
                     {% for listing in listings %}
                     <tr class="{% if selected_listing and selected_listing.id == listing.id %}is-selected{% endif %}">
                         <td>
-                            <a href="/listings?listing_id={{ listing.id }}">{{ listing.title }}</a>
+                            <a href="{{ request.url.include_query_params(listing_id=listing.id) }}">{{ listing.title }}</a>
                             <p class="cell-sub">{{ listing.normalized_name }}</p>
                         </td>
                         <td>{{ listing.source }}</td>
@@ -84,6 +85,8 @@
             <li>Nombre normalizado: {{ selected_listing.normalized_name }}</li>
             <li>Fuente: {{ selected_listing.source }}</li>
             <li>Consulta: {{ selected_listing.search_query or "n/d" }}</li>
+            <li>Condición: {{ selected_listing.condition or "n/d" }}</li>
+            <li>Envío detectado: {% if selected_listing.shipping_cost is not none %}{{ "%.2f"|format(selected_listing.shipping_cost) }} €{% else %}n/d{% endif %}</li>
             <li>Compra directa: {% if selected_listing.buy_it_now %}sí{% else %}no{% endif %}</li>
             <li>Primera vez: {{ selected_listing.first_seen_at or "n/d" }}</li>
             <li>Última vez: {{ selected_listing.last_seen_at or "n/d" }}</li>
@@ -108,7 +111,7 @@
                         <p>{{ opportunity.comparable_count or 0 }} comparables · {% if opportunity.confidence == "high" %}alta{% elif opportunity.confidence == "medium" %}media{% elif opportunity.confidence == "low" %}baja{% else %}{{ opportunity.confidence }}{% endif %}</p>
                     </div>
                     <div class="row-values">
-                        <span>{{ "%.2f"|format(opportunity.expected_profit) }} €</span>
+                        <span>{{ "%.2f"|format(opportunity.profit_estimate or 0) }} €</span>
                     </div>
                 </a>
                 {% endfor %}
