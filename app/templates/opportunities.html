@@ -6,11 +6,12 @@
 
 {% block content %}
 <section class="filters glass">
-    <form method="get" class="filters-form">
+    <form method="get" class="filters-form" data-auto-submit="true">
         <input type="text" name="q" value="{{ filters.q }}" placeholder="Buscar producto o nombre normalizado" />
         <select name="source">
             <option value="">Todos los mercados</option>
             <option value="ebay" {% if filters.source == "ebay" %}selected{% endif %}>eBay</option>
+            <option value="wallapop" {% if filters.source == "wallapop" %}selected{% endif %}>Wallapop</option>
         </select>
         <select name="confidence">
             <option value="">Cualquier confianza</option>
@@ -42,8 +43,8 @@
                         <th>Ref. mercado</th>
                         <th>Producto</th>
                         <th>Precio</th>
-                        <th>Mercado</th>
-                        <th>Descuento</th>
+                        <th>Reventa est.</th>
+                        <th>Profit est.</th>
                         <th>Comparables</th>
                         <th>Confianza</th>
                     </tr>
@@ -51,14 +52,14 @@
                 <tbody>
                     {% for opportunity in opportunities %}
                     <tr class="{% if selected_opportunity and selected_opportunity.id == opportunity.id %}is-selected{% endif %}">
-                        <td><a href="/opportunities?opportunity_id={{ opportunity.id }}">{{ opportunity.source }}</a></td>
+                        <td><a href="{{ request.url.include_query_params(opportunity_id=opportunity.id) }}">{{ opportunity.source }}</a><p class="cell-sub">{{ opportunity.opportunity_type or "generic_market_gap" }}</p></td>
                         <td>
-                            <a href="/opportunities?opportunity_id={{ opportunity.id }}">{{ opportunity.title }}</a>
+                            <a href="{{ request.url.include_query_params(opportunity_id=opportunity.id) }}">{{ opportunity.title }}</a>
                             <p class="cell-sub">{{ opportunity.normalized_name }}</p>
                         </td>
                         <td>{{ "%.2f"|format(opportunity.buy_price) }} €</td>
-                        <td>{{ "%.2f"|format(opportunity.estimated_sale_price) }} €</td>
-                        <td class="good">{{ "%.2f"|format(opportunity.discount_pct or 0) }}%</td>
+                        <td>{{ "%.2f"|format(opportunity.estimated_resale_price or 0) }} €</td>
+                        <td class="good">{{ "%.2f"|format(opportunity.profit_estimate or 0) }} €</td>
                         <td>{{ opportunity.comparable_count or 0 }}</td>
                         <td><span class="confidence {{ opportunity.confidence }}">{% if opportunity.confidence == "high" %}alta{% elif opportunity.confidence == "medium" %}media{% elif opportunity.confidence == "low" %}baja{% else %}{{ opportunity.confidence }}{% endif %}</span></td>
                     </tr>
@@ -75,8 +76,9 @@
             <h3 class="detail-title">{{ selected_opportunity.title }}</h3>
             <p class="signal-copy">
                 Compra: <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong><br />
-                Mercado: <strong>{{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</strong><br />
-                <span class="signal-edge">→ Beneficio: +{{ "%.2f"|format(selected_opportunity.expected_profit) }} €</span>
+                Reventa estimada: <strong>{{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</strong><br />
+                <span class="signal-edge">→ Profit estimado: +{{ "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</span><br />
+                <span>Envío contado: <strong>{{ "%.2f"|format(selected_opportunity.shipping_estimate or 0) }} €</strong></span>
             </p>
             <a class="primary-cta" href="{{ selected_opportunity.url }}" target="_blank" rel="noreferrer">
                 <span class="cta-icon">↗</span>
@@ -90,16 +92,20 @@
                 <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong>
             </div>
             <div class="detail-card detail-card-featured glass-soft">
-                <span class="metric-label">Precio de mercado</span>
-                <strong>{{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</strong>
+                <span class="metric-label">Reventa estimada</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</strong>
             </div>
             <div class="detail-card detail-card-featured glass-soft">
-                <span class="metric-label">Beneficio estimado</span>
-                <strong>{{ "%.2f"|format(selected_opportunity.expected_profit) }} €</strong>
+                <span class="metric-label">Profit estimado</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</strong>
             </div>
             <div class="detail-card detail-card-medium glass-soft">
-                <span class="metric-label">Descuento</span>
-                <strong>{{ "%.2f"|format(selected_opportunity.discount_pct or 0) }}%</strong>
+                <span class="metric-label">Fees estimadas</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.fees_estimate or 0) }} €</strong>
+            </div>
+            <div class="detail-card detail-card-medium glass-soft">
+                <span class="metric-label">Envío estimado</span>
+                <strong>{{ "%.2f"|format(selected_opportunity.shipping_estimate or 0) }} €</strong>
             </div>
             <div class="detail-card detail-card-medium glass-soft">
                 <span class="metric-label">Comparables</span>
@@ -116,8 +122,9 @@
             <p class="signal-caption">Señal directa, sin ruido.</p>
             <div class="insight-stack">
                 <p class="insight-line">Compra por <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong></p>
-                <p class="insight-line">Mercado en <strong>{{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</strong></p>
-                <p class="insight-line accent">Beneficio estimado: <strong>+{{ "%.2f"|format(selected_opportunity.expected_profit) }} €</strong></p>
+                <p class="insight-line">Reventa estimada en <strong>{{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</strong></p>
+                <p class="insight-line">Fees simuladas: <strong>{{ "%.2f"|format(selected_opportunity.fees_estimate or 0) }} €</strong> + envío <strong>{{ "%.2f"|format(selected_opportunity.shipping_estimate or 0) }} €</strong></p>
+                <p class="insight-line accent">Profit estimado: <strong>+{{ "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</strong></p>
             </div>
         </article>
 
@@ -129,7 +136,20 @@
                 <li>Consulta: {{ selected_opportunity.search_query or "n/d" }}</li>
                 <li>Formato: {% if selected_opportunity.buy_it_now %}compra directa{% else %}mixto{% endif %}</li>
                 <li>Fuente: {{ selected_opportunity.source }}</li>
+                <li>Decisión manual: {% if selected_opportunity.manual_decision == "accepted" %}interesante{% elif selected_opportunity.manual_decision == "rejected" %}descartada{% else %}pendiente{% endif %}</li>
             </ul>
+        </article>
+
+        <article class="evidence-box glass-soft">
+            <h4>Validación manual</h4>
+            <div class="decision-actions">
+                <form method="post" action="/opportunities/{{ selected_opportunity.id }}/decision?decision=accepted">
+                    <button type="submit" class="decision-button accept">Marcar como interesante</button>
+                </form>
+                <form method="post" action="/opportunities/{{ selected_opportunity.id }}/decision?decision=rejected">
+                    <button type="submit" class="decision-button reject">Descartar</button>
+                </form>
+            </div>
         </article>
 
         {% if selected_evidence %}
@@ -139,10 +159,13 @@
                 <a href="/analysis?opportunity_id={{ selected_opportunity.id }}">Ver análisis</a>
             </div>
             <ul class="meta-list">
+                <li>Modelo: {{ selected_evidence.model }}</li>
+                <li>Capacidad: {{ selected_evidence.capacity }}</li>
                 <li>Fuentes: {{ selected_evidence.data_sources|join(", ") }}</li>
+                <li>Condiciones vistas: {{ selected_evidence.conditions|join(", ") or "n/d" }}</li>
+                <li>Origen del envío: {{ selected_evidence.shipping_source or "fallback" }}</li>
                 <li>Consultas: {{ selected_evidence.search_queries|join(", ") or "n/d" }}</li>
                 <li>Último comparable: {{ selected_evidence.latest_seen_at or "n/d" }}</li>
-                <li>Variantes descartadas: {{ selected_evidence.discarded_count }}</li>
             </ul>
         </article>
         {% endif %}

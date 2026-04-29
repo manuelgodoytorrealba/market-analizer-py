@@ -54,11 +54,18 @@ def sync_source_listings(
                     title=str(item["title"]),
                     normalized_name=str(item.get("normalized_name") or ""),
                     price=float(item["price"]),
+                    currency=str(item.get("currency") or ""),
                     url=str(item["url"]),
+                    image_url=str(item.get("image_url") or ""),
                     location=str(item.get("location") or ""),
+                    seller_location=str(item.get("seller_location") or ""),
+                    shipping_region=str(item.get("shipping_region") or ""),
                     search_query=str(item.get("search_query") or ""),
+                    condition=str(item.get("condition") or ""),
+                    shipping_cost=float(item["shipping_cost"]) if item.get("shipping_cost") is not None else None,
                     buy_it_now=bool(item.get("buy_it_now", True)),
                     is_active=True,
+                    scraped_at=timestamp,
                     first_seen_at=timestamp,
                     last_seen_at=timestamp,
                 )
@@ -71,11 +78,20 @@ def sync_source_listings(
             "title": str(item["title"]),
             "normalized_name": str(item.get("normalized_name") or ""),
             "price": float(item["price"]),
+            "currency": str(item.get("currency") or ""),
             "url": str(item["url"]),
+            "image_url": str(item.get("image_url") or ""),
             "location": str(item.get("location") or ""),
+            "seller_location": str(item.get("seller_location") or ""),
+            "shipping_region": str(item.get("shipping_region") or ""),
             "search_query": str(item.get("search_query") or ""),
+            "condition": str(item.get("condition") or ""),
+            "shipping_cost": (
+                float(item["shipping_cost"]) if item.get("shipping_cost") is not None else None
+            ),
             "buy_it_now": bool(item.get("buy_it_now", True)),
             "is_active": True,
+            "scraped_at": timestamp,
             "last_seen_at": timestamp,
         }
         for field_name, field_value in new_values.items():
@@ -119,11 +135,27 @@ def refresh_opportunities(db: Session) -> list[Opportunity]:
         .all()
     )
     opportunities = analyze_opportunities(active_listings)
+    previous_decisions = {
+        (
+            opportunity.source_listing_id if opportunity.source_listing_id is not None else opportunity.listing_id,
+            opportunity.opportunity_type or "generic_market_gap",
+        ): opportunity.manual_decision
+        for opportunity in db.query(Opportunity).all()
+        if (
+            (opportunity.source_listing_id is not None or opportunity.listing_id is not None)
+            and opportunity.manual_decision
+        )
+    }
 
     db.query(Opportunity).delete()
     db.flush()
 
     for opportunity in opportunities:
+        decision_key = (
+            opportunity.source_listing_id if opportunity.source_listing_id is not None else opportunity.listing_id,
+            opportunity.opportunity_type or "generic_market_gap",
+        )
+        opportunity.manual_decision = previous_decisions.get(decision_key)
         db.add(opportunity)
 
     db.commit()
@@ -142,26 +174,36 @@ def record_scrape_run(
     status: str,
     queries: list[str],
     summary: SyncSummary,
+    listings_normalized: int,
     opportunities_generated: int,
     errors_count: int,
     duration_seconds: float,
+    summary_json: str = "",
+    started_at: datetime | None = None,
+    finished_at: datetime | None = None,
+    error_message: str = "",
     notes: str = "",
 ) -> ScrapeRun:
+    started = started_at or datetime.now(UTC)
+    finished = finished_at or datetime.now(UTC)
     scrape_run = ScrapeRun(
         source=source,
         status=status,
         query_count=len(queries),
         queries_json=json.dumps(queries),
         listings_seen=summary.total_seen,
+        listings_normalized=listings_normalized,
         inserted=summary.inserted,
         updated=summary.updated,
         deactivated=summary.deactivated,
         opportunities_generated=opportunities_generated,
         errors_count=errors_count,
+        error_message=error_message,
+        summary_json=summary_json,
         duration_seconds=duration_seconds,
         notes=notes,
-        started_at=datetime.now(UTC),
-        finished_at=datetime.now(UTC),
+        started_at=started,
+        finished_at=finished,
     )
     db.add(scrape_run)
     db.commit()

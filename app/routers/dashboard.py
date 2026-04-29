@@ -2,7 +2,8 @@ import json
 from collections import Counter
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -160,6 +161,9 @@ def settings_view(request: Request):
         {
             "settings_items": [
                 ("Database URL", settings.database_url),
+                ("Runtime interval", f"{settings.runtime_interval_seconds} s"),
+                ("Dashboard refresh", f"{settings.dashboard_refresh_seconds} s"),
+                ("Log level", settings.log_level),
                 ("Request timeout", f"{settings.request_timeout_seconds} s"),
                 ("Retry attempts", settings.retry_attempts),
                 ("Backoff base", f"{settings.backoff_base_seconds} s"),
@@ -172,11 +176,34 @@ def settings_view(request: Request):
     return templates.TemplateResponse("settings.html", context)
 
 
+@router.post("/opportunities/{opportunity_id}/decision")
+def update_opportunity_decision(opportunity_id: int, request: Request, decision: str):
+    if decision not in {"accepted", "rejected"}:
+        raise HTTPException(status_code=400, detail="Invalid decision")
+
+    db: Session = SessionLocal()
+    try:
+        opportunity = db.query(Opportunity).filter(Opportunity.id == opportunity_id).first()
+        if opportunity is None:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+
+        opportunity.manual_decision = decision
+        db.commit()
+    finally:
+        db.close()
+
+    redirect_target = request.headers.get("referer") or f"/opportunities?opportunity_id={opportunity_id}"
+    return RedirectResponse(url=redirect_target, status_code=303)
+
+
 def _base_context(request: Request, active_page: str) -> dict[str, Any]:
+    settings = get_settings()
     return {
         "request": request,
         "nav_items": NAV_ITEMS,
         "active_page": active_page,
+        "runtime_interval_seconds": settings.runtime_interval_seconds,
+        "auto_refresh_seconds": settings.dashboard_refresh_seconds,
     }
 
 
@@ -211,9 +238,9 @@ def _build_stats(
     latest_run: ScrapeRun | None,
 ) -> list[dict[str, Any]]:
     active_count = sum(1 for listing in listings if listing.is_active)
-    avg_discount = (
+    avg_profit = (
         round(
-            sum((opportunity.discount_pct or 0.0) for opportunity in opportunities)
+            sum((opportunity.profit_estimate or 0.0) for opportunity in opportunities)
             / len(opportunities),
             2,
         )
@@ -223,7 +250,7 @@ def _build_stats(
     return [
         {"label": "Active listings", "value": active_count, "tone": "neutral"},
         {"label": "Live opportunities", "value": len(opportunities), "tone": "accent"},
-        {"label": "Average discount", "value": f"{avg_discount}%", "tone": "good"},
+        {"label": "Average profit", "value": f"{avg_profit} €", "tone": "good"},
         {
             "label": "Last run status",
             "value": latest_run.status.replace("_", " ") if latest_run else "no runs",

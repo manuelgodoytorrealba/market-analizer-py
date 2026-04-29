@@ -1,12 +1,12 @@
 from pathlib import Path
 import unittest
 
-from app.scrapers.ebay import EbayScraper
+from app.scrapers.ebay import EbayHTMLScraper, build_ebay_provider
 
 
 class EbayScraperTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.scraper = EbayScraper()
+        self.scraper = EbayHTMLScraper()
 
     def test_parse_price_handles_euro_formats(self) -> None:
         self.assertEqual(self.scraper._parse_price("1.234,56 EUR"), 1234.56)
@@ -15,6 +15,8 @@ class EbayScraperTests(unittest.TestCase):
     def test_invalid_titles_are_filtered(self) -> None:
         self.assertFalse(self.scraper._is_valid_listing("PS5 caja vacia", 100.0))
         self.assertFalse(self.scraper._is_valid_listing("Steam Deck auction", 300.0))
+        self.assertFalse(self.scraper._is_valid_listing("iPhone 13 broken", 300.0))
+        self.assertFalse(self.scraper._is_valid_listing("iPhone 13 icloud locked", 300.0))
 
     def test_auction_detection_is_conservative(self) -> None:
         self.assertTrue(
@@ -44,6 +46,21 @@ class EbayScraperTests(unittest.TestCase):
         self.assertGreater(extraction["strategy_counts"]["mobile_cards"], 0)
         self.assertGreater(len(extraction["candidates"]), 0)
         self.assertIn("steam deck", extraction["candidates"][0]["title"].lower())
+
+    def test_classifies_european_shipping_regions(self) -> None:
+        self.assertEqual(self.scraper._classify_shipping_region("Madrid, Spain"), "local")
+        self.assertEqual(self.scraper._classify_shipping_region("Paris, France"), "eu")
+        self.assertEqual(self.scraper._classify_shipping_region("Toronto, Canada"), "international")
+
+    def test_builds_stable_external_id_from_item_url(self) -> None:
+        self.assertEqual(
+            self.scraper._build_external_id("https://www.ebay.es/itm/Apple-iPhone/123456789012?hash=item"),
+            "123456789012",
+        )
+
+    def test_build_provider_defaults_to_html(self) -> None:
+        provider = build_ebay_provider()
+        self.assertTrue(hasattr(provider, "fetch_listings"))
 
 
 if __name__ == "__main__":

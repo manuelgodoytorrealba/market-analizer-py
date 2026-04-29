@@ -1,5 +1,7 @@
-from app.db import init_db
+import sys
+
+from scripts.cli import main as cli_main
+
 
 if __name__ == "__main__":
-    init_db()
-    print("✅ Base de datos inicializada")
+    raise SystemExit(cli_main(["init-db", *sys.argv[1:]]))

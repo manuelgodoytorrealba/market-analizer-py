@@ -37,11 +37,18 @@ def _migrate_sqlite_schema() -> None:
                     title VARCHAR NOT NULL,
                     normalized_name VARCHAR,
                     price FLOAT NOT NULL,
+                    currency VARCHAR,
                     url TEXT NOT NULL,
+                    image_url TEXT,
                     location VARCHAR,
+                    seller_location VARCHAR,
+                    shipping_region VARCHAR,
                     search_query VARCHAR,
+                    condition VARCHAR,
+                    shipping_cost FLOAT,
                     buy_it_now BOOLEAN,
                     is_active BOOLEAN,
+                    scraped_at DATETIME,
                     first_seen_at DATETIME,
                     last_seen_at DATETIME,
                     PRIMARY KEY (id)
@@ -67,9 +74,15 @@ def _migrate_sqlite_schema() -> None:
                     title,
                     normalized_name,
                     price,
+                    currency,
                     url,
+                    image_url,
                     location,
+                    seller_location,
+                    shipping_region,
                     search_query,
+                    condition,
+                    shipping_cost,
                     buy_it_now,
                     is_active,
                     first_seen_at,
@@ -82,11 +95,18 @@ def _migrate_sqlite_schema() -> None:
                     lo.title,
                     lo.normalized_name,
                     lo.price,
+                    'EUR',
                     lo.url,
+                    NULL,
                     lo.location,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
                     NULL,
                     1,
                     COALESCE(lo.is_active, 1),
+                    COALESCE(lo.last_seen_at, lo.first_seen_at),
                     lo.first_seen_at,
                     lo.last_seen_at
                 FROM listings_old lo
@@ -114,17 +134,35 @@ def _migrate_sqlite_schema() -> None:
             "CREATE INDEX IF NOT EXISTS ix_opportunities_score ON opportunities (score)"
         )
         _ensure_column_exists(conn, "listings", "search_query", "VARCHAR")
+        _ensure_column_exists(conn, "listings", "currency", "VARCHAR")
+        _ensure_column_exists(conn, "listings", "image_url", "TEXT")
+        _ensure_column_exists(conn, "listings", "seller_location", "VARCHAR")
+        _ensure_column_exists(conn, "listings", "shipping_region", "VARCHAR")
+        _ensure_column_exists(conn, "listings", "condition", "VARCHAR")
+        _ensure_column_exists(conn, "listings", "shipping_cost", "FLOAT")
+        _ensure_column_exists(conn, "listings", "scraped_at", "DATETIME")
         _ensure_column_exists(conn, "listings", "buy_it_now", "BOOLEAN DEFAULT 1")
         _ensure_column_exists(conn, "opportunities", "listing_id", "INTEGER")
+        _ensure_column_exists(conn, "opportunities", "source_listing_id", "INTEGER")
         _ensure_column_exists(conn, "opportunities", "normalized_name", "VARCHAR")
         _ensure_column_exists(conn, "opportunities", "search_query", "VARCHAR")
+        _ensure_column_exists(conn, "opportunities", "opportunity_type", "VARCHAR")
         _ensure_column_exists(conn, "opportunities", "buy_it_now", "BOOLEAN DEFAULT 1")
+        _ensure_column_exists(conn, "opportunities", "estimated_resale_price", "FLOAT")
+        _ensure_column_exists(conn, "opportunities", "profit_estimate", "FLOAT")
+        _ensure_column_exists(conn, "opportunities", "fees_estimate", "FLOAT")
+        _ensure_column_exists(conn, "opportunities", "shipping_estimate", "FLOAT")
+        _ensure_column_exists(conn, "opportunities", "liquidity_count", "INTEGER")
+        _ensure_column_exists(conn, "opportunities", "manual_decision", "VARCHAR")
         _ensure_column_exists(conn, "opportunities", "discount_pct", "FLOAT")
         _ensure_column_exists(conn, "opportunities", "comparable_count", "INTEGER")
         _ensure_column_exists(conn, "opportunities", "confidence", "VARCHAR")
         _ensure_column_exists(conn, "opportunities", "metric_name", "VARCHAR")
         _ensure_column_exists(conn, "opportunities", "reasoning_summary", "TEXT")
         _ensure_column_exists(conn, "opportunities", "evidence_json", "TEXT")
+        _ensure_column_exists(conn, "scrape_runs", "listings_normalized", "INTEGER DEFAULT 0")
+        _ensure_column_exists(conn, "scrape_runs", "error_message", "TEXT")
+        _ensure_column_exists(conn, "scrape_runs", "summary_json", "TEXT")
 
 
 def _table_exists(conn, table_name: str) -> bool:

@@ -19,7 +19,7 @@
             {% elif latest_run.status == "error" %}error
             {% else %}{{ latest_run.status.replace("_", " ") }}{% endif %}
         </span>
-        <span class="hero-note">{{ latest_run.opportunities_generated }} oportunidades en la última ejecución</span>
+        <span class="hero-note">{{ latest_run.opportunities_generated }} oportunidades · última actualización {{ latest_run.finished_at or "n/d" }} · {{ "%.2f"|format(latest_run.duration_seconds or 0) }} s</span>
         {% else %}
         <span class="hero-note">Todavía no hay ejecuciones registradas</span>
         {% endif %}
@@ -31,16 +31,63 @@
     <article class="metric-card glass tone-{{ stat.tone }}">
         <p>
             {% if stat.label == "Active listings" %}Anuncios activos
-            {% elif stat.label == "Stored opportunities" %}Oportunidades guardadas
-            {% elif stat.label == "Latest run candidates" %}Candidatos de la última ejecución
-            {% elif stat.label == "Listings updated" %}Anuncios actualizados
-            {% elif stat.label == "Listings deactivated" %}Anuncios desactivados
-            {% elif stat.label == "Recent errors" %}Errores recientes
+            {% elif stat.label == "Average profit" %}Profit medio
             {% else %}{{ stat.label }}{% endif %}
         </p>
         <strong>{{ stat.value }}</strong>
     </article>
     {% endfor %}
+</section>
+
+<section class="content-grid">
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Runtime</h3>
+            <span class="muted">Estado del loop</span>
+        </div>
+        {% if latest_run %}
+        <ul class="meta-list meta-list-tight">
+            <li>Estado: {{ latest_run.status }}</li>
+            <li>Hora última ejecución: {{ latest_run.finished_at or "n/d" }}</li>
+            <li>Duración último ciclo: {{ "%.2f"|format(latest_run.duration_seconds or 0) }} s</li>
+            <li>Intervalo configurado: {{ runtime_interval_seconds }} s</li>
+            <li>Listings encontrados: {{ latest_run.listings_seen }}</li>
+            <li>Listings válidos: {{ latest_run.listings_normalized or 0 }}</li>
+            <li>Errores: {{ latest_run.error_message or "sin errores" }}</li>
+        </ul>
+        {% else %}
+        <div class="panel-empty glass-soft">
+            <strong>Sin runtime activo todavía</strong>
+            <p>Arranca el loop backend para ver actividad continua.</p>
+        </div>
+        {% endif %}
+    </article>
+
+    <article class="panel glass">
+        <div class="panel-head">
+            <h3>Último ciclo</h3>
+            <a href="/runs">Ver historial</a>
+        </div>
+        {% if latest_run %}
+        <div class="compact-list">
+            <a class="compact-row" href="/runs?run_id={{ latest_run.id }}">
+                <div>
+                    <strong>Ejecución #{{ latest_run.id }}</strong>
+                    <p>{{ latest_run.status }} · {{ "%.2f"|format(latest_run.duration_seconds or 0) }} s</p>
+                </div>
+                <div class="row-values">
+                    <span>{{ latest_run.listings_normalized or 0 }} válidos</span>
+                    <span>{{ latest_run.opportunities_generated }} oportunidades</span>
+                </div>
+            </a>
+        </div>
+        {% else %}
+        <div class="panel-empty glass-soft">
+            <strong>Sin ciclos registrados</strong>
+            <p>El histórico aparecerá aquí cuando corra el runtime.</p>
+        </div>
+        {% endif %}
+    </article>
 </section>
 
 <section class="content-grid">
@@ -59,7 +106,7 @@
                 </div>
                 <div class="row-values">
                     <span>{{ "%.2f"|format(opportunity.buy_price) }} €</span>
-                    <span class="good">{{ "%.2f"|format(opportunity.discount_pct or 0) }}%</span>
+                    <span class="good">{{ "%.2f"|format(opportunity.profit_estimate or 0) }} €</span>
                 </div>
             </a>
             {% endfor %}

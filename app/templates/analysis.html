@@ -35,8 +35,8 @@
             <h3 class="detail-title">Por qué encaja</h3>
             <p class="signal-copy">
                 Compra: <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong><br />
-                Mercado: <strong>{{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</strong><br />
-                <span class="signal-edge">→ Beneficio: +{{ "%.2f"|format(selected_opportunity.expected_profit) }} €</span>
+                Reventa estimada: <strong>{{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</strong><br />
+                <span class="signal-edge">→ Profit estimado: +{{ "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</span>
             </p>
             <a class="primary-cta" href="{{ selected_opportunity.url }}" target="_blank" rel="noreferrer">
                 <span class="cta-icon">↗</span>
@@ -47,14 +47,19 @@
         <div class="formula-card glass-soft">
             <p class="metric-label">Precio detectado</p>
             <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong>
-            <span>Precio de mercado {{ "%.2f"|format(selected_opportunity.estimated_sale_price) }} €</span>
-            <span>Descuento {{ "%.2f"|format(selected_opportunity.discount_pct or 0) }}%</span>
+            <span>Reventa estimada {{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</span>
+            <span>Fees {{ "%.2f"|format(selected_opportunity.fees_estimate or 0) }} € · envío {{ "%.2f"|format(selected_opportunity.shipping_estimate or 0) }} €</span>
+            <span>Profit {{ "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</span>
         </div>
 
         <article class="evidence-box glass-soft">
             <h4>Origen de datos</h4>
             <ul class="meta-list">
                 <li>Fuentes: {{ selected_evidence.data_sources|join(", ") }}</li>
+                <li>Modelo: {{ selected_evidence.model }}</li>
+                <li>Capacidad: {{ selected_evidence.capacity }}</li>
+                <li>Condiciones vistas: {{ selected_evidence.conditions|join(", ") or "n/d" }}</li>
+                <li>Origen del envío: {{ selected_evidence.shipping_source or "fallback" }}</li>
                 <li>Consultas: {{ selected_evidence.search_queries|join(", ") or "n/d" }}</li>
                 <li>Ámbito: {{ selected_evidence.dataset_scope }}</li>
                 <li>Último comparable: {{ selected_evidence.latest_seen_at or "n/d" }}</li>
@@ -72,7 +77,7 @@
                 <a class="compact-row" href="{{ comparable.url }}" target="_blank">
                     <div>
                     <strong>{{ comparable.title }}</strong>
-                    <p>{{ comparable.source }} · {{ comparable.search_query or "n/d" }}</p>
+                    <p>{{ comparable.source }} · {{ comparable.search_query or "n/d" }} · {{ comparable.condition or "n/d" }} · envío {% if comparable.shipping_cost is not none %}{{ "%.2f"|format(comparable.shipping_cost) }} €{% else %}n/d{% endif %}</p>
                 </div>
                     <div class="row-values">
                         <span>{{ "%.2f"|format(comparable.price) }} €</span>
@@ -80,30 +85,6 @@
                 </a>
                 {% endfor %}
             </div>
-        </article>
-
-        <article class="evidence-box glass-soft">
-            <div class="panel-head">
-                <h4>Variantes descartadas</h4>
-                <span class="muted">{{ selected_evidence.discarded_count }}</span>
-            </div>
-            {% if selected_evidence.discarded %}
-            <div class="compact-list">
-                {% for discarded in selected_evidence.discarded %}
-                <div class="compact-row">
-                    <div>
-                        <strong>{{ discarded.title }}</strong>
-                        <p>{{ discarded.reason }}</p>
-                    </div>
-                    <div class="row-values">
-                        <span>{{ "%.2f"|format(discarded.price) }} €</span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="muted">No hay variantes descartadas para esta familia.</p>
-            {% endif %}
         </article>
         {% else %}
         <p class="empty-state">Elige una oportunidad para ver su evidencia.</p>
