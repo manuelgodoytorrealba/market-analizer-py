@@ -9,7 +9,11 @@ from app.config import get_settings
 from app.db import SessionLocal, init_db
 from app.scrapers.ebay import build_ebay_provider
 from app.scrapers.wallapop import build_wallapop_provider
-from app.services.persistence import record_scrape_run, refresh_opportunities, sync_source_listings
+from app.services.persistence import (
+    record_scrape_run,
+    refresh_opportunities,
+    sync_source_listings,
+)
 
 
 # Add or remove eBay search coverage here.
@@ -30,6 +34,7 @@ WALLAPOP_TARGET_QUERIES = [
     "iphone 14 pro 128gb",
     "iphone 15 pro 128gb",
     "iphone 15 pro 256gb",
+    "Nintendo DS",
 ]
 
 TARGET_QUERIES_BY_SOURCE = {
@@ -86,7 +91,9 @@ def configure_logging() -> None:
 
 
 def get_target_queries_by_source() -> dict[str, list[str]]:
-    return {source: list(queries) for source, queries in TARGET_QUERIES_BY_SOURCE.items()}
+    return {
+        source: list(queries) for source, queries in TARGET_QUERIES_BY_SOURCE.items()
+    }
 
 
 def build_market_providers(
@@ -99,12 +106,18 @@ def build_market_providers(
     # Register new providers here, reusing the common fetch_listings/debug_scrape contract.
     if not allowed_sources or "ebay" in allowed_sources:
         providers.append(("ebay", build_ebay_provider(), EBAY_TARGET_QUERIES))
-    if settings.enable_wallapop and (not allowed_sources or "wallapop" in allowed_sources):
-        providers.append(("wallapop", build_wallapop_provider(), WALLAPOP_TARGET_QUERIES))
+    if settings.enable_wallapop and (
+        not allowed_sources or "wallapop" in allowed_sources
+    ):
+        providers.append(
+            ("wallapop", build_wallapop_provider(), WALLAPOP_TARGET_QUERIES)
+        )
     return providers
 
 
-def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = None) -> CycleReport:
+def run_market_cycle(
+    *, scraper=None, selected_sources: Iterable[str] | None = None
+) -> CycleReport:
     init_db()
     db = SessionLocal()
     provider_entries = (
@@ -138,8 +151,12 @@ def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = N
                         query_result = active_provider.debug_scrape(query)
                         raw_candidates = int(query_result["raw_candidates"])
                         valid_results = len(query_result["results"])
-                        discard_reasons = dict(query_result.get("discard_reasons") or {})
-                        quality_signals = dict(query_result.get("quality_signals") or {})
+                        discard_reasons = dict(
+                            query_result.get("discard_reasons") or {}
+                        )
+                        quality_signals = dict(
+                            query_result.get("quality_signals") or {}
+                        )
                         provider_scraped += raw_candidates
                         provider_normalized += valid_results
                         provider_items.extend(query_result["results"])
@@ -195,7 +212,9 @@ def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = N
                 except Exception as exc:
                     provider_errors += 1
                     provider_error_messages.append(f"{query}: {exc}")
-                    logger.exception("cycle query_failed source=%s query=%s", source_name, query)
+                    logger.exception(
+                        "cycle query_failed source=%s query=%s", source_name, query
+                    )
 
             summary = sync_source_listings(
                 db,
@@ -220,14 +239,18 @@ def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = N
                     "discard_reasons": provider_discard_reasons,
                     "quality_signals": provider_quality,
                     "query_summaries": query_summaries,
-                    "fresh_data_available": provider_scraped > 0 or provider_normalized > 0,
+                    "fresh_data_available": provider_scraped > 0
+                    or provider_normalized > 0,
                 }
             )
 
         opportunities = refresh_opportunities(db)
         finished_at = datetime.now(UTC)
         duration_seconds = time.perf_counter() - started_perf
-        fresh_data_any = any(provider_report["fresh_data_available"] for provider_report in provider_reports)
+        fresh_data_any = any(
+            provider_report["fresh_data_available"]
+            for provider_report in provider_reports
+        )
         status = "error" if errors_count or not fresh_data_any else "success"
         error_message = "\n".join(error_messages)
         if not fresh_data_any:
@@ -238,7 +261,9 @@ def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = N
             )
         opportunities_by_source = _count_opportunities_by_source(opportunities)
         opportunities_by_type = _count_opportunities_by_type(opportunities)
-        opportunities_by_source_and_type = _count_opportunities_by_source_and_type(opportunities)
+        opportunities_by_source_and_type = _count_opportunities_by_source_and_type(
+            opportunities
+        )
 
         for provider_report in provider_reports:
             source_name = provider_report["source_name"]
@@ -268,7 +293,9 @@ def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = N
                 "quality_signals": provider_report["quality_signals"],
                 "fresh_data_available": provider_report["fresh_data_available"],
                 "opportunities_generated": opportunities_by_source.get(source_name, 0),
-                "opportunities_generated_by_type": opportunities_by_source_and_type.get(source_name, {}),
+                "opportunities_generated_by_type": opportunities_by_source_and_type.get(
+                    source_name, {}
+                ),
                 "errors": provider_report["error_messages"],
             }
 
@@ -333,9 +360,12 @@ def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = N
         provider_summaries = [
             ProviderCycleSummary(
                 source_name=provider_report["source_name"],
-                status="error"
-                if provider_report["errors_count"] or not provider_report["fresh_data_available"]
-                else "success",
+                status=(
+                    "error"
+                    if provider_report["errors_count"]
+                    or not provider_report["fresh_data_available"]
+                    else "success"
+                ),
                 queries=list(provider_report["queries"]),
                 listings_scraped=provider_report["scraped"],
                 listings_normalized=provider_report["normalized"],
@@ -346,17 +376,23 @@ def run_market_cycle(*, scraper=None, selected_sources: Iterable[str] | None = N
                 discarded_results=sum(provider_report["discard_reasons"].values()),
                 discard_reasons=dict(provider_report["discard_reasons"]),
                 quality_signals=dict(provider_report["quality_signals"]),
-                opportunities_count=opportunities_by_source.get(provider_report["source_name"], 0),
+                opportunities_count=opportunities_by_source.get(
+                    provider_report["source_name"], 0
+                ),
                 opportunities_by_type=dict(
-                    opportunities_by_source_and_type.get(provider_report["source_name"], {})
+                    opportunities_by_source_and_type.get(
+                        provider_report["source_name"], {}
+                    )
                 ),
                 fresh_data_available=provider_report["fresh_data_available"],
-                error_message="\n".join(provider_report["error_messages"])
-                if provider_report["fresh_data_available"]
-                else (
-                    f"{'\n'.join(provider_report['error_messages'])}\nno_fresh_data_detected"
-                    if provider_report["error_messages"]
-                    else "no_fresh_data_detected"
+                error_message=(
+                    "\n".join(provider_report["error_messages"])
+                    if provider_report["fresh_data_available"]
+                    else (
+                        f"{'\n'.join(provider_report['error_messages'])}\nno_fresh_data_detected"
+                        if provider_report["error_messages"]
+                        else "no_fresh_data_detected"
+                    )
                 ),
             )
             for provider_report in provider_reports
