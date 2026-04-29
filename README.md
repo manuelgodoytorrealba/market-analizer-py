@@ -279,3 +279,6 @@ Si mañana quieres seguir desde aquí:
 5. Si ves enlaces rotos antiguos, ejecuta `repair-wallapop-urls`
 
 Ese es el circuito mínimo para iterar sin perder tiempo.
+
+
+ramon eres gay 
