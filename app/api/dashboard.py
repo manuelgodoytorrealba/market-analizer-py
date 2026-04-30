@@ -7,15 +7,16 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
-from app.db import SessionLocal
-from app.models import Listing, Opportunity, ScrapeRun
+from app.core.config import get_settings
+from app.db.session import SessionLocal
+from app.models.entities import Listing, Opportunity, ScrapeRun
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 NAV_ITEMS = [
     {"key": "overview", "label": "Overview", "href": "/"},
+    {"key": "decision_engine", "label": "Decision Engine", "href": "/decision-engine-view"},
     {"key": "opportunities", "label": "Opportunities", "href": "/opportunities"},
     {"key": "listings", "label": "Listings", "href": "/listings"},
     {"key": "analysis", "label": "Pricing Evidence", "href": "/analysis"},
@@ -48,6 +49,13 @@ def overview(request: Request):
         return templates.TemplateResponse("overview.html", context)
     finally:
         db.close()
+
+
+@router.get("/decision-engine-view")
+def decision_engine_view(request: Request):
+    context = _base_context(request, active_page="decision_engine")
+    context.update({"auto_refresh_seconds": None})
+    return templates.TemplateResponse("decision_engine.html", context)
 
 
 @router.get("/opportunities")

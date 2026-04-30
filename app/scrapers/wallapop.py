@@ -10,7 +10,7 @@ from collections import Counter
 import requests
 from bs4 import BeautifulSoup
 
-from app.config import get_settings
+from app.core.config import get_settings
 from app.scrapers.base import BaseListingProvider
 from app.services.normalizer import (
     build_normalized_name,
@@ -276,7 +276,7 @@ class WallapopScraper(BaseListingProvider):
     # =============================
 
     def _normalize_candidate_with_reason(self, candidate, query):
-        title = str(candidate.get("title", "")).strip()
+        title = self._clean_title(str(candidate.get("title", "")).strip())
 
         if not title:
             return None, "no_title", {}
@@ -304,13 +304,15 @@ class WallapopScraper(BaseListingProvider):
                 "price": price,
                 "currency": "EUR",
                 "url": self._build_url(candidate),
-                "image_url": "",
-                "location": "",
-                "seller_location": "",
+                "image_url": self._extract_image_url(candidate),
+                "location": self._extract_location(candidate),
+                "seller_location": self._extract_seller_location(candidate),
                 "shipping_region": "national",
                 "shipping_cost": 7.0,
                 "search_query": query,
                 "condition": infer_condition(title, query) or "",
+                "description": self._extract_description(candidate),
+                "snippet": self._extract_snippet(candidate),
                 "buy_it_now": True,
             },
             None,
@@ -335,6 +337,15 @@ class WallapopScraper(BaseListingProvider):
         raw = match.group(1).replace(",", ".")
         return float(raw)
 
+    def _clean_title(self, title: str) -> str:
+        cleaned = re.sub(
+            r"^\s*\d+\s*/\s*\d+\s+[0-9]+(?:[.,][0-9]+)?\s*(?:€|eur)\s*",
+            "",
+            title,
+            flags=re.IGNORECASE,
+        )
+        return re.sub(r"\s+", " ", cleaned).strip()
+
     def _build_url(self, candidate):
         url = candidate.get("url")
 
@@ -344,6 +355,61 @@ class WallapopScraper(BaseListingProvider):
         if isinstance(url, str):
             return f"https://es.wallapop.com{url}"
 
+        return ""
+
+    def _extract_description(self, candidate) -> str:
+        for key in ("description", "body", "details"):
+            value = candidate.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
+
+    def _extract_snippet(self, candidate) -> str:
+        for key in ("snippet", "subtitle", "storytelling"):
+            value = candidate.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
+
+    def _extract_image_url(self, candidate) -> str:
+        for key in ("image_url", "web_slug"):
+            value = candidate.get(key)
+            if isinstance(value, str) and value.startswith("http"):
+                return value
+
+        images = candidate.get("images") or candidate.get("photos")
+        if isinstance(images, list):
+            for image in images:
+                if isinstance(image, str) and image.startswith("http"):
+                    return image
+                if isinstance(image, dict):
+                    for key in ("url", "small", "medium", "large"):
+                        value = image.get(key)
+                        if isinstance(value, str) and value.startswith("http"):
+                            return value
+        return ""
+
+    def _extract_location(self, candidate) -> str:
+        location = candidate.get("location")
+        if isinstance(location, str):
+            return location
+        if isinstance(location, dict):
+            for key in ("city", "name"):
+                value = location.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return ""
+
+    def _extract_seller_location(self, candidate) -> str:
+        user = candidate.get("user") or candidate.get("seller")
+        if isinstance(user, dict):
+            location = user.get("location")
+            if isinstance(location, str):
+                return location
+            if isinstance(location, dict):
+                city = location.get("city") or location.get("name")
+                if isinstance(city, str):
+                    return city
         return ""
 
     def _save_debug_html(self, query: str, html: str):

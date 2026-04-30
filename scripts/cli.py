@@ -5,9 +5,9 @@ from typing import cast
 
 import uvicorn
 
-from app.config import get_settings
-from app.db import SessionLocal, init_db
-from app.models import Listing, Opportunity
+from app.core.config import get_settings
+from app.db.session import SessionLocal, init_db
+from app.models.entities import Listing, Opportunity
 from app.scrapers.wallapop import WallapopScraper
 from app.services.runtime import (
     CycleReport,

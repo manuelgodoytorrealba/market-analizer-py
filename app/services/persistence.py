@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.models import Listing, Opportunity, ScrapeRun
+from app.models.entities import Listing, Opportunity, ScrapeRun
 from app.services.analyzer import analyze_opportunities
 
 
