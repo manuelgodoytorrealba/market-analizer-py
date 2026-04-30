@@ -23,7 +23,7 @@ EBAY_TARGET_QUERIES = build_ebay_queries()
 WALLAPOP_TARGET_QUERIES = build_wallapop_queries()
 
 TARGET_QUERIES_BY_SOURCE = {
-    "ebay": EBAY_TARGET_QUERIES,
+    # "ebay": EBAY_TARGET_QUERIES,
     "wallapop": WALLAPOP_TARGET_QUERIES,
 }
 
@@ -85,18 +85,14 @@ def build_market_providers(
     selected_sources: Iterable[str] | None = None,
 ) -> list[tuple[str, object, list[str]]]:
     settings = get_settings()
-    allowed_sources = set(selected_sources or [])
     providers: list[tuple[str, object, list[str]]] = []
 
-    # Register new providers here, reusing the common fetch_listings/debug_scrape contract.
-    if not allowed_sources or "ebay" in allowed_sources:
-        providers.append(("ebay", build_ebay_provider(), EBAY_TARGET_QUERIES))
-    if settings.enable_wallapop and (
-        not allowed_sources or "wallapop" in allowed_sources
-    ):
+    # 🔥 SOLO WALLAPOP
+    if settings.enable_wallapop:
         providers.append(
             ("wallapop", build_wallapop_provider(), WALLAPOP_TARGET_QUERIES)
         )
+
     return providers
 
 

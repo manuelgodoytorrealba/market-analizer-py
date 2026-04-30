@@ -8,22 +8,30 @@
 <section class="filters glass">
     <form method="get" class="filters-form" data-auto-submit="true">
         <input type="text" name="q" value="{{ filters.q }}" placeholder="Buscar producto o nombre normalizado" />
+        <select name="category">
+            <option value="">Todos</option>
+            <option value="iphone" {% if filters.category=="iphone" %}selected{% endif %}>iPhone</option>
+            <option value="macbook" {% if filters.category=="macbook" %}selected{% endif %}>MacBook</option>
+            <option value="gpu" {% if filters.category=="gpu" %}selected{% endif %}>GPU</option>
+        </select>
         <select name="source">
             <option value="">Todos los mercados</option>
-            <option value="ebay" {% if filters.source == "ebay" %}selected{% endif %}>eBay</option>
-            <option value="wallapop" {% if filters.source == "wallapop" %}selected{% endif %}>Wallapop</option>
+            <option value="ebay" {% if filters.source=="ebay" %}selected{% endif %}>eBay</option>
+            <option value="wallapop" {% if filters.source=="wallapop" %}selected{% endif %}>Wallapop</option>
         </select>
         <select name="confidence">
             <option value="">Cualquier confianza</option>
-            <option value="high" {% if filters.confidence == "high" %}selected{% endif %}>Alta</option>
-            <option value="medium" {% if filters.confidence == "medium" %}selected{% endif %}>Media</option>
-            <option value="low" {% if filters.confidence == "low" %}selected{% endif %}>Baja</option>
+            <option value="high" {% if filters.confidence=="high" %}selected{% endif %}>Alta</option>
+            <option value="medium" {% if filters.confidence=="medium" %}selected{% endif %}>Media</option>
+            <option value="low" {% if filters.confidence=="low" %}selected{% endif %}>Baja</option>
         </select>
-        <input type="number" step="1" name="min_discount" value="{{ filters.min_discount }}" placeholder="Descuento mínimo %" />
+        <input type="number" step="1" name="min_discount" value="{{ filters.min_discount }}"
+            placeholder="Descuento mínimo %" />
         <input type="number" step="1" name="min_price" value="{{ filters.min_price }}" placeholder="Precio mínimo" />
         <input type="number" step="1" name="max_price" value="{{ filters.max_price }}" placeholder="Precio máximo" />
         <label class="check-pill">
-            <input type="checkbox" name="buy_it_now" value="true" {% if filters.buy_it_now == "true" %}checked{% endif %} />
+            <input type="checkbox" name="buy_it_now" value="true" {% if filters.buy_it_now=="true" %}checked{% endif
+                %} />
             <span>Solo compra directa</span>
         </label>
         <button type="submit">Aplicar</button>
@@ -51,17 +59,24 @@
                 </thead>
                 <tbody>
                     {% for opportunity in opportunities %}
-                    <tr class="{% if selected_opportunity and selected_opportunity.id == opportunity.id %}is-selected{% endif %}">
-                        <td><a href="{{ request.url.include_query_params(opportunity_id=opportunity.id) }}">{{ opportunity.source }}</a><p class="cell-sub">{{ opportunity.opportunity_type or "generic_market_gap" }}</p></td>
+                    <tr
+                        class="{% if selected_opportunity and selected_opportunity.id == opportunity.id %}is-selected{% endif %}">
+                        <td><a href="{{ request.url.include_query_params(opportunity_id=opportunity.id) }}">{{
+                                opportunity.source }}</a>
+                            <p class="cell-sub">{{ opportunity.opportunity_type or "generic_market_gap" }}</p>
+                        </td>
                         <td>
-                            <a href="{{ request.url.include_query_params(opportunity_id=opportunity.id) }}">{{ opportunity.title }}</a>
+                            <a href="{{ request.url.include_query_params(opportunity_id=opportunity.id) }}">{{
+                                opportunity.title }}</a>
                             <p class="cell-sub">{{ opportunity.normalized_name }}</p>
                         </td>
                         <td>{{ "%.2f"|format(opportunity.buy_price) }} €</td>
                         <td>{{ "%.2f"|format(opportunity.estimated_resale_price or 0) }} €</td>
                         <td class="good">{{ "%.2f"|format(opportunity.profit_estimate or 0) }} €</td>
                         <td>{{ opportunity.comparable_count or 0 }}</td>
-                        <td><span class="confidence {{ opportunity.confidence }}">{% if opportunity.confidence == "high" %}alta{% elif opportunity.confidence == "medium" %}media{% elif opportunity.confidence == "low" %}baja{% else %}{{ opportunity.confidence }}{% endif %}</span></td>
+                        <td><span class="confidence {{ opportunity.confidence }}">{% if opportunity.confidence == "high"
+                                %}alta{% elif opportunity.confidence == "medium" %}media{% elif opportunity.confidence
+                                == "low" %}baja{% else %}{{ opportunity.confidence }}{% endif %}</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -76,9 +91,12 @@
             <h3 class="detail-title">{{ selected_opportunity.title }}</h3>
             <p class="signal-copy">
                 Compra: <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong><br />
-                Reventa estimada: <strong>{{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</strong><br />
-                <span class="signal-edge">→ Profit estimado: +{{ "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</span><br />
-                <span>Envío contado: <strong>{{ "%.2f"|format(selected_opportunity.shipping_estimate or 0) }} €</strong></span>
+                Reventa estimada: <strong>{{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }}
+                    €</strong><br />
+                <span class="signal-edge">→ Profit estimado: +{{ "%.2f"|format(selected_opportunity.profit_estimate or
+                    0) }} €</span><br />
+                <span>Envío contado: <strong>{{ "%.2f"|format(selected_opportunity.shipping_estimate or 0) }}
+                        €</strong></span>
             </p>
             <a class="primary-cta" href="{{ selected_opportunity.url }}" target="_blank" rel="noreferrer">
                 <span class="cta-icon">↗</span>
@@ -113,7 +131,10 @@
             </div>
             <div class="detail-card detail-card-medium glass-soft">
                 <span class="metric-label">Confianza</span>
-                <strong class="confidence {{ selected_opportunity.confidence }}">{% if selected_opportunity.confidence == "high" %}alta{% elif selected_opportunity.confidence == "medium" %}media{% elif selected_opportunity.confidence == "low" %}baja{% else %}{{ selected_opportunity.confidence }}{% endif %}</strong>
+                <strong class="confidence {{ selected_opportunity.confidence }}">{% if selected_opportunity.confidence
+                    == "high" %}alta{% elif selected_opportunity.confidence == "medium" %}media{% elif
+                    selected_opportunity.confidence == "low" %}baja{% else %}{{ selected_opportunity.confidence }}{%
+                    endif %}</strong>
             </div>
         </div>
 
@@ -121,10 +142,15 @@
             <h4>Por qué es una oportunidad</h4>
             <p class="signal-caption">Señal directa, sin ruido.</p>
             <div class="insight-stack">
-                <p class="insight-line">Compra por <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }} €</strong></p>
-                <p class="insight-line">Reventa estimada en <strong>{{ "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</strong></p>
-                <p class="insight-line">Fees simuladas: <strong>{{ "%.2f"|format(selected_opportunity.fees_estimate or 0) }} €</strong> + envío <strong>{{ "%.2f"|format(selected_opportunity.shipping_estimate or 0) }} €</strong></p>
-                <p class="insight-line accent">Profit estimado: <strong>+{{ "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</strong></p>
+                <p class="insight-line">Compra por <strong>{{ "%.2f"|format(selected_opportunity.buy_price) }}
+                        €</strong></p>
+                <p class="insight-line">Reventa estimada en <strong>{{
+                        "%.2f"|format(selected_opportunity.estimated_resale_price or 0) }} €</strong></p>
+                <p class="insight-line">Fees simuladas: <strong>{{ "%.2f"|format(selected_opportunity.fees_estimate or
+                        0) }} €</strong> + envío <strong>{{ "%.2f"|format(selected_opportunity.shipping_estimate or 0)
+                        }} €</strong></p>
+                <p class="insight-line accent">Profit estimado: <strong>+{{
+                        "%.2f"|format(selected_opportunity.profit_estimate or 0) }} €</strong></p>
             </div>
         </article>
 
@@ -136,7 +162,8 @@
                 <li>Consulta: {{ selected_opportunity.search_query or "n/d" }}</li>
                 <li>Formato: {% if selected_opportunity.buy_it_now %}compra directa{% else %}mixto{% endif %}</li>
                 <li>Fuente: {{ selected_opportunity.source }}</li>
-                <li>Decisión manual: {% if selected_opportunity.manual_decision == "accepted" %}interesante{% elif selected_opportunity.manual_decision == "rejected" %}descartada{% else %}pendiente{% endif %}</li>
+                <li>Decisión manual: {% if selected_opportunity.manual_decision == "accepted" %}interesante{% elif
+                    selected_opportunity.manual_decision == "rejected" %}descartada{% else %}pendiente{% endif %}</li>
             </ul>
         </article>
 
