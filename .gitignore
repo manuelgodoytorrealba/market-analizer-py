@@ -4,3 +4,5 @@ __pycache__/
 .env
 data/app.db
 logs/*.log
+raw
+data/raw

@@ -15,7 +15,6 @@ from app.services.persistence import (
     sync_source_listings,
 )
 
-
 # Add or remove eBay search coverage here.
 EBAY_TARGET_QUERIES = [
     "iphone 13 128gb",
@@ -26,15 +25,69 @@ EBAY_TARGET_QUERIES = [
 
 # Add or remove Wallapop search coverage here.
 WALLAPOP_TARGET_QUERIES = [
+    # 📱 iPhones (base actual + más variantes)
+    "iphone 11 128gb",
+    "iphone 11 pro 256gb",
     "iphone 12 128gb",
     "iphone 12 pro 128gb",
+    "iphone 12 pro max 128gb",
     "iphone 13 128gb",
     "iphone 13 pro 128gb",
+    "iphone 13 pro max 128gb",
     "iphone 14 128gb",
     "iphone 14 pro 128gb",
+    "iphone 14 pro max 128gb",
+    "iphone 15 128gb",
     "iphone 15 pro 128gb",
     "iphone 15 pro 256gb",
-    "Nintendo DS",
+    "iphone 15 pro max 256gb",
+    # 🎮 Consolas
+    "ps4 slim",
+    "ps4 pro",
+    "ps5",
+    "ps5 digital",
+    "xbox series s",
+    "xbox series x",
+    "nintendo switch",
+    "nintendo switch oled",
+    "nintendo switch lite",
+    "nintendo ds",
+    # 💻 Laptops (muy buenas para arbitraje)
+    "macbook air m1",
+    "macbook air m2",
+    "macbook pro m1",
+    "macbook pro m2",
+    "macbook pro 14 m1",
+    "macbook pro 16 m1",
+    # 🖥️ GPUs (mercado volátil = oportunidades)
+    "rtx 3060",
+    "rtx 3070",
+    "rtx 3080",
+    "rtx 3090",
+    # 🎧 Electrónica rápida
+    "airpods pro",
+    "airpods pro 2",
+    "sony wh-1000xm4",
+    "sony wh-1000xm5",
+    # ⌚ Wearables
+    "apple watch series 7",
+    "apple watch series 8",
+    "apple watch ultra",
+    # 📸 Cámaras (muy buen margen)
+    "sony a7 iii",
+    "sony a7 iv",
+    "canon eos r",
+    "canon eos rp",
+    # 👟 Sneakers (tu nicho 🔥)
+    "nike dunk low",
+    "nike air force 1",
+    "jordan 1 retro",
+    "jordan 4 retro",
+    "yeezy 350",
+    # 🎴 Cartas (mercado hype)
+    "pokemon charizard",
+    "pokemon psa",
+    "pokemon booster box",
 ]
 
 TARGET_QUERIES_BY_SOURCE = {

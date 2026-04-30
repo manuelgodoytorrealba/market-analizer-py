@@ -1,6 +1,5 @@
 import re
 
-
 STOPWORDS = {
     "con",
     "sin",
@@ -21,23 +20,8 @@ STOPWORDS = {
     "precintada",
     "caja",
     "original",
-    "mando",
-    "bundle",
-    "pack",
-    "leer",
     "vendo",
-    "blanca",
-    "blanco",
-    "negra",
-    "negro",
-    "roja",
-    "rojo",
-    "azul",
-    "verde",
-    "gris",
-    "silver",
-    "space",
-    "gray",
+    "leer",
 }
 
 QUALIFIER_TOKENS = {
@@ -51,212 +35,170 @@ QUALIFIER_TOKENS = {
     "pro",
     "max",
     "ultra",
-    "lcd",
     "m1",
     "m2",
 }
 
-FAMILY_EXCLUDED_TOKENS = {
-    "oled",
-    "slim",
-    "digital",
-    "disc",
-    "wifi",
-    "cellular",
+# 🔥 NUEVO: categorías base (simple pero potente)
+CATEGORY_PATTERNS = {
+    "iphone": r"iphone\s*\d+",
+    "macbook": r"macbook",
+    "gpu": r"rtx\s*\d{3,4}",
+    "playstation": r"\bps[45]\b",
+    "xbox": r"xbox",
+    "switch": r"nintendo\s*switch",
+    "sneaker": r"(nike|jordan|yeezy)",
+    "airpods": r"airpods",
+    "watch": r"apple\s*watch",
 }
 
-IPHONE_NOISE_TOKENS = {
-    "apple",
-    "smartphone",
-    "telefono",
-    "phone",
-    "movil",
-    "mobile",
-    "libre",
-    "unlocked",
-    "sim",
-    "free",
-    "shipment",
-    "shipping",
-    "box",
-    "only",
-    "excellent",
-    "good",
-    "fair",
-}
-
-IPHONE_CONDITION_KEYWORDS = {
-    "new": {
-        "new",
-        "nuevo",
-        "nueva",
-        "brandnew",
-        "brand",
-        "sealed",
-        "precintado",
-        "precintada",
-    },
-    "refurb": {
-        "refurbished",
-        "refurb",
-        "reacondicionado",
-        "reconditioned",
-        "renewed",
-    },
-    "used": {
-        "used",
-        "usado",
-        "usada",
-        "secondhand",
-        "segunda",
-        "mano",
-    },
-}
-
-SUPPORTED_IPHONE_GENERATIONS = {"12", "13", "14"}
-SUPPORTED_IPHONE_CAPACITIES = {"128gb", "256gb"}
+# -----------------------------
+# 🔥 CORE NORMALIZER
+# -----------------------------
 
 
 def build_normalized_name(title: str, fallback_query: str | None = None) -> str:
-    iphone_specs = extract_iphone_specs(title, fallback_query=fallback_query)
-    if iphone_specs is not None:
-        return iphone_specs["normalized_name"]
+    # 1. Primero intenta iPhone (lo mantenemos)
+    iphone = extract_iphone_specs(title, fallback_query)
+    if iphone:
+        return iphone["normalized_name"]
 
-    title_tokens = _tokenize(title)
-    query_tokens = _tokenize(fallback_query or "")
+    # 2. Normalización genérica
+    tokens = _tokenize(f"{title} {fallback_query or ''}")
 
-    if not title_tokens and not query_tokens:
+    if not tokens:
         return ""
 
-    selected: list[str] = []
+    base = _detect_base_product(title.lower())
+    capacities = _extract_capacities(tokens)
+    qualifiers = [t for t in tokens if t in QUALIFIER_TOKENS]
 
-    for token in query_tokens:
-        if token in title_tokens:
-            selected.append(token)
+    # 🔥 prioridad: base → modelo → atributos
+    normalized = _unique(
+        ([base] if base else []) + tokens[:3] + capacities + qualifiers
+    )
 
-    if not selected:
-        selected.extend(query_tokens[:4])
-
-    capacities = _extract_capacities(title_tokens + query_tokens)
-    qualifiers = [
-        token for token in title_tokens if token in QUALIFIER_TOKENS and token not in selected
-    ]
-    remaining: list[str] = []
-    if not selected:
-        remaining = [
-            token
-            for token in title_tokens
-            if token not in capacities and token not in qualifiers
-        ]
-
-    normalized_tokens = _unique(selected + capacities + qualifiers + remaining[:3])
-    return " ".join(normalized_tokens[:7]).strip()
+    return " ".join(normalized[:6]).strip()
 
 
 def build_family_key(title: str, fallback_query: str | None = None) -> str:
-    iphone_specs = extract_iphone_specs(title, fallback_query=fallback_query)
-    if iphone_specs is not None:
-        return iphone_specs["model"]
+    iphone = extract_iphone_specs(title, fallback_query)
+    if iphone:
+        return iphone["model"]
 
-    normalized_name = build_normalized_name(title, fallback_query=fallback_query)
-    if not normalized_name:
-        return ""
+    normalized = build_normalized_name(title, fallback_query)
+    tokens = normalized.split()
 
-    family_tokens = [
-        token
-        for token in normalized_name.split()
-        if token not in FAMILY_EXCLUDED_TOKENS
-        and re.fullmatch(r"\d+(?:gb|tb)", token) is None
+    # 🔥 quitar capacidades y ruido
+    family = [
+        t
+        for t in tokens
+        if not re.fullmatch(r"\d+(gb|tb)", t) and t not in QUALIFIER_TOKENS
     ]
-    return " ".join(family_tokens[:5]).strip()
+
+    return " ".join(family[:3])
 
 
 def build_comparable_key(title: str, fallback_query: str | None = None) -> str:
-    iphone_specs = extract_iphone_specs(title, fallback_query=fallback_query)
-    if iphone_specs is None:
-        return build_normalized_name(title, fallback_query=fallback_query)
-    return f"{iphone_specs['model']} {iphone_specs['capacity']}"
+    iphone = extract_iphone_specs(title, fallback_query)
+    if iphone:
+        return f"{iphone['model']} {iphone['capacity']}"
+
+    # 🔥 ahora todos los productos tienen comparable key
+    return build_normalized_name(title, fallback_query)
 
 
-def infer_condition(title: str, fallback_query: str | None = None) -> str | None:
-    tokens = set(_tokenize(f"{title} {fallback_query or ''}"))
-    for condition in ("refurb", "new", "used"):
-        if tokens.intersection(IPHONE_CONDITION_KEYWORDS[condition]):
-            return condition
+# -----------------------------
+# 🔥 DETECCIÓN DE PRODUCTO
+# -----------------------------
+
+
+def _detect_base_product(text: str) -> str | None:
+    for key, pattern in CATEGORY_PATTERNS.items():
+        if re.search(pattern, text):
+            return key
     return None
 
 
-def extract_iphone_specs(title: str, fallback_query: str | None = None) -> dict[str, str] | None:
-    title_lowered = title.lower()
-    if "iphone" not in title_lowered:
+# -----------------------------
+# 🔥 IPHONE (LO MANTENEMOS)
+# -----------------------------
+
+
+def extract_iphone_specs(title: str, fallback_query: str | None = None):
+    text = (title + " " + (fallback_query or "")).lower()
+
+    if "iphone" not in text:
         return None
 
-    model_match = re.search(r"\biphone\s*(12|13|14)\b", title_lowered)
-    if model_match is None:
+    model_match = re.search(r"iphone\s*(\d+)", text)
+    if not model_match:
         return None
 
-    generation = model_match.group(1)
-    if generation not in SUPPORTED_IPHONE_GENERATIONS:
+    model = model_match.group(1)
+
+    if int(model) < 11:
         return None
 
-    if re.search(rf"\biphone\s*{generation}\s*mini\b", title_lowered):
-        return None
-    if re.search(rf"\biphone\s*{generation}\s*pro\s*max\b", title_lowered):
+    variant = "pro" if "pro" in text else ""
+    capacity_match = re.search(r"(128gb|256gb|512gb)", text)
+
+    if not capacity_match:
         return None
 
-    title_tokens = _tokenize(title)
-    query_tokens = _tokenize(fallback_query or "")
-    filtered_title_tokens = [token for token in title_tokens if token not in IPHONE_NOISE_TOKENS]
-    model = (
-        f"iphone {generation} pro"
-        if re.search(rf"\biphone\s*{generation}\s*pro\b", title_lowered)
-        else f"iphone {generation}"
-    )
-    capacity = next(
-        (
-            token
-            for token in filtered_title_tokens
-            if token in SUPPORTED_IPHONE_CAPACITIES
-        ),
-        "",
-    )
-    if not capacity:
-        capacity = next((token for token in query_tokens if token in SUPPORTED_IPHONE_CAPACITIES), "")
-    if not capacity:
-        return None
+    capacity = capacity_match.group(1)
 
-    condition = infer_condition(title, fallback_query=fallback_query)
-    normalized_name = f"{model} {capacity}"
+    model_name = f"iphone {model} {variant}".strip()
+    normalized_name = f"{model_name} {capacity}"
 
     return {
-        "model": model,
+        "model": model_name,
         "capacity": capacity,
         "normalized_name": normalized_name,
-        "condition": condition or "",
     }
 
 
-def _extract_capacities(tokens: list[str]) -> list[str]:
-    return [token for token in tokens if re.fullmatch(r"\d+(?:gb|tb)", token) is not None]
+# -----------------------------
+# 🔧 HELPERS
+# -----------------------------
 
 
-def _tokenize(text: str) -> list[str]:
-    normalized = re.sub(r"[^a-z0-9]+", " ", (text or "").lower())
-    return [
-        token
-        for token in normalized.split()
-        if token not in STOPWORDS and (len(token) > 1 or any(char.isdigit() for char in token))
-    ]
+def _extract_capacities(tokens):
+    return [t for t in tokens if re.fullmatch(r"\d+(gb|tb)", t)]
 
 
-def _unique(tokens: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
+def _tokenize(text: str):
+    text = re.sub(r"[^a-z0-9]+", " ", text.lower())
+    return [t for t in text.split() if t not in STOPWORDS and len(t) > 1]
 
-    for token in tokens:
-        if token in seen:
-            continue
-        seen.add(token)
-        result.append(token)
 
+def _unique(tokens):
+    seen = set()
+    result = []
+    for t in tokens:
+        if t not in seen:
+            seen.add(t)
+            result.append(t)
     return result
+
+
+# -----------------------------
+# 🔥 CONDITION (compatibilidad)
+# -----------------------------
+
+CONDITION_KEYWORDS = {
+    "new": {"nuevo", "nueva", "precintado", "precintada", "sealed"},
+    "used": {"usado", "usada", "segunda", "mano"},
+    "refurb": {"reacondicionado", "refurbished", "renewed"},
+}
+
+
+def infer_condition(title: str, fallback_query: str | None = None) -> str | None:
+    text = f"{title} {fallback_query or ''}".lower()
+
+    for condition, keywords in CONDITION_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in text:
+                return condition
+
+    return None
