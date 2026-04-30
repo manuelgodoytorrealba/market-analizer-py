@@ -1,6 +1,3 @@
-Vale, ahora sí, sin formato raro, sin etiquetas, sin nada fuera.
-
-👉 **Copia TODO este bloque tal cual y guárdalo como `ONBOARDING.md`**
 
 ---
 
