@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Iterable
 
-from app.config import get_settings
-from app.db import SessionLocal, init_db
+from app.core.config import get_settings
+from app.db.session import SessionLocal, init_db
 from app.scrapers.ebay import build_ebay_provider
 from app.scrapers.wallapop import build_wallapop_provider
 from app.services.persistence import (
@@ -14,31 +14,16 @@ from app.services.persistence import (
     refresh_opportunities,
     sync_source_listings,
 )
-
+from app.services.query_builder import build_ebay_queries, build_wallapop_queries
 
 # Add or remove eBay search coverage here.
-EBAY_TARGET_QUERIES = [
-    "iphone 13 128gb",
-    "iphone 13 pro 128gb",
-    "iphone 13 256gb",
-    "iphone 13 pro 256gb",
-]
+EBAY_TARGET_QUERIES = build_ebay_queries()
 
 # Add or remove Wallapop search coverage here.
-WALLAPOP_TARGET_QUERIES = [
-    "iphone 12 128gb",
-    "iphone 12 pro 128gb",
-    "iphone 13 128gb",
-    "iphone 13 pro 128gb",
-    "iphone 14 128gb",
-    "iphone 14 pro 128gb",
-    "iphone 15 pro 128gb",
-    "iphone 15 pro 256gb",
-    "Nintendo DS",
-]
+WALLAPOP_TARGET_QUERIES = build_wallapop_queries()
 
 TARGET_QUERIES_BY_SOURCE = {
-    "ebay": EBAY_TARGET_QUERIES,
+    # "ebay": EBAY_TARGET_QUERIES,
     "wallapop": WALLAPOP_TARGET_QUERIES,
 }
 
@@ -100,18 +85,14 @@ def build_market_providers(
     selected_sources: Iterable[str] | None = None,
 ) -> list[tuple[str, object, list[str]]]:
     settings = get_settings()
-    allowed_sources = set(selected_sources or [])
     providers: list[tuple[str, object, list[str]]] = []
 
-    # Register new providers here, reusing the common fetch_listings/debug_scrape contract.
-    if not allowed_sources or "ebay" in allowed_sources:
-        providers.append(("ebay", build_ebay_provider(), EBAY_TARGET_QUERIES))
-    if settings.enable_wallapop and (
-        not allowed_sources or "wallapop" in allowed_sources
-    ):
+    # 🔥 SOLO WALLAPOP
+    if settings.enable_wallapop:
         providers.append(
             ("wallapop", build_wallapop_provider(), WALLAPOP_TARGET_QUERIES)
         )
+
     return providers
 
 

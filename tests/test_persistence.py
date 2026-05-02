@@ -10,8 +10,8 @@ class PersistenceTests(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         os.environ["MARKET_ANALYZER_DB_URL"] = f"sqlite:///{self.tmpdir.name}/test.db"
 
-        import app.config as config_module
-        import app.db as db_module
+        import app.core.config as config_module
+        import app.db.session as db_module
 
         config_module.get_settings.cache_clear()
         self.config_module = importlib.reload(config_module)
@@ -24,7 +24,7 @@ class PersistenceTests(unittest.TestCase):
         self.tmpdir.cleanup()
 
     def test_sync_updates_existing_and_deactivates_missing(self) -> None:
-        from app.models import Listing
+        from app.models.entities import Listing
         from app.services.persistence import sync_source_listings
 
         self.db_module.init_db()
@@ -128,7 +128,7 @@ class PersistenceTests(unittest.TestCase):
         db.close()
 
     def test_refresh_opportunities_preserves_manual_decision(self) -> None:
-        from app.models import Listing, Opportunity
+        from app.models.entities import Listing, Opportunity
         from app.services.persistence import refresh_opportunities
 
         self.db_module.init_db()

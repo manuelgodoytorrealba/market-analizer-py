@@ -27,6 +27,7 @@
                 <a href="{{ nav_item.href }}" class="nav-link {% if active_page == nav_item.key %}is-active{% endif %}">
                     <span>
                         {% if nav_item.key == "overview" %}Resumen
+                        {% elif nav_item.key == "decision_engine" %}Decision Engine
                         {% elif nav_item.key == "opportunities" %}Oportunidades
                         {% elif nav_item.key == "listings" %}Anuncios
                         {% elif nav_item.key == "analysis" %}Evidencia

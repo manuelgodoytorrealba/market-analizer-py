@@ -5,9 +5,9 @@ from typing import cast
 
 import uvicorn
 
-from app.config import get_settings
-from app.db import SessionLocal, init_db
-from app.models import Listing, Opportunity
+from app.core.config import get_settings
+from app.db.session import SessionLocal, init_db
+from app.models.entities import Listing, Opportunity
 from app.scrapers.wallapop import WallapopScraper
 from app.services.runtime import (
     CycleReport,
@@ -15,7 +15,6 @@ from app.services.runtime import (
     get_target_queries_by_source,
     run_market_cycle,
 )
-
 
 VALID_SOURCES = ("ebay", "wallapop")
 
@@ -159,7 +158,9 @@ def _run_repair_wallapop_urls(_: argparse.Namespace) -> int:
                 setattr(listing, "url", expected_url)
                 updated_listings += 1
 
-        opportunities = db.query(Opportunity).filter(Opportunity.source == "wallapop").all()
+        opportunities = (
+            db.query(Opportunity).filter(Opportunity.source == "wallapop").all()
+        )
         for opportunity in opportunities:
             listing_id = cast(int, opportunity.listing_id)
             current_url = cast(str, opportunity.url)
@@ -185,14 +186,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    init_db_parser = subparsers.add_parser("init-db", help="Inicializa la base de datos")
+    init_db_parser = subparsers.add_parser(
+        "init-db", help="Inicializa la base de datos"
+    )
     init_db_parser.set_defaults(handler=_run_init_db)
 
-    once_parser = subparsers.add_parser("once", help="Ejecuta un solo ciclo de scraping/análisis")
+    once_parser = subparsers.add_parser(
+        "once", help="Ejecuta un solo ciclo de scraping/análisis"
+    )
     _add_source_argument(once_parser)
     once_parser.set_defaults(handler=_run_once)
 
-    runtime_parser = subparsers.add_parser("runtime", help="Ejecuta el runtime continuo")
+    runtime_parser = subparsers.add_parser(
+        "runtime", help="Ejecuta el runtime continuo"
+    )
     _add_source_argument(runtime_parser)
     runtime_parser.add_argument(
         "--interval",
@@ -203,12 +210,16 @@ def build_parser() -> argparse.ArgumentParser:
     runtime_parser.set_defaults(handler=_run_runtime)
 
     serve_parser = subparsers.add_parser("serve", help="Levanta el dashboard FastAPI")
-    serve_parser.add_argument("--host", default="127.0.0.1", help="Host del servidor")
-    serve_parser.add_argument("--port", type=int, default=8000, help="Puerto del servidor")
+    serve_parser.add_argument("--host", default="0.0.0.0", help="Host del servidor")
+    serve_parser.add_argument(
+        "--port", type=int, default=8000, help="Puerto del servidor"
+    )
     serve_parser.add_argument("--reload", action="store_true", help="Activa autoreload")
     serve_parser.set_defaults(handler=_run_serve)
 
-    queries_parser = subparsers.add_parser("queries", help="Muestra las queries configuradas")
+    queries_parser = subparsers.add_parser(
+        "queries", help="Muestra las queries configuradas"
+    )
     queries_parser.set_defaults(handler=_run_queries)
 
     repair_urls_parser = subparsers.add_parser(

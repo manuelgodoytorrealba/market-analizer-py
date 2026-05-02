@@ -1,6 +1,7 @@
+import json
 import unittest
 
-from app.models import Listing
+from app.models.entities import Listing
 from app.services.analyzer import (
     ARBITRAGE_OPPORTUNITY_TYPE,
     GENERIC_OPPORTUNITY_TYPE,
@@ -376,6 +377,120 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(opportunity.comparable_count, 3)
         self.assertEqual(opportunity.estimated_resale_price, 255.0)
         self.assertGreater(opportunity.profit_estimate, 20.0)
+
+    def test_analyzer_filters_extreme_underprice_as_too_risky(self) -> None:
+        listings = [
+            Listing(
+                id=201,
+                source="wallapop",
+                external_id="w201",
+                title="iPhone 13 128GB urgente",
+                normalized_name="iphone 13 128gb",
+                price=100.0,
+                shipping_cost=7.0,
+                url="https://example.com/w201",
+                is_active=True,
+            ),
+            Listing(
+                id=202,
+                source="wallapop",
+                external_id="w202",
+                title="iPhone 13 128GB negro",
+                normalized_name="iphone 13 128gb",
+                price=250.0,
+                shipping_cost=7.0,
+                url="https://example.com/w202",
+                is_active=True,
+            ),
+            Listing(
+                id=203,
+                source="wallapop",
+                external_id="w203",
+                title="iPhone 13 128GB blanco",
+                normalized_name="iphone 13 128gb",
+                price=255.0,
+                shipping_cost=7.0,
+                url="https://example.com/w203",
+                is_active=True,
+            ),
+            Listing(
+                id=204,
+                source="wallapop",
+                external_id="w204",
+                title="iPhone 13 128GB azul",
+                normalized_name="iphone 13 128gb",
+                price=260.0,
+                shipping_cost=7.0,
+                url="https://example.com/w204",
+                is_active=True,
+            ),
+        ]
+
+        opportunities = analyze_opportunities(listings)
+
+        self.assertEqual(opportunities, [])
+
+    def test_analyzer_evidence_includes_v3_market_signals(self) -> None:
+        listings = [
+            Listing(
+                id=301,
+                source="wallapop",
+                external_id="w301",
+                title="iPhone 13 128GB urgente",
+                normalized_name="iphone 13 128gb",
+                price=190.0,
+                shipping_cost=7.0,
+                url="https://example.com/w301",
+                is_active=True,
+            ),
+            Listing(
+                id=302,
+                source="wallapop",
+                external_id="w302",
+                title="iPhone 13 128GB negro",
+                normalized_name="iphone 13 128gb",
+                price=250.0,
+                shipping_cost=7.0,
+                url="https://example.com/w302",
+                is_active=True,
+            ),
+            Listing(
+                id=303,
+                source="wallapop",
+                external_id="w303",
+                title="iPhone 13 128GB blanco",
+                normalized_name="iphone 13 128gb",
+                price=255.0,
+                shipping_cost=7.0,
+                url="https://example.com/w303",
+                is_active=True,
+            ),
+            Listing(
+                id=304,
+                source="wallapop",
+                external_id="w304",
+                title="iPhone 13 128GB azul",
+                normalized_name="iphone 13 128gb",
+                price=260.0,
+                shipping_cost=7.0,
+                url="https://example.com/w304",
+                is_active=True,
+            ),
+        ]
+        setattr(listings[0], "description", "Venta rápida, funciona perfectamente")
+
+        opportunities = analyze_opportunities(listings)
+        opportunity = opportunities[0]
+        evidence = json.loads(opportunity.evidence_json)
+
+        self.assertEqual(opportunity.metric_name, "wallapop_flipping_v3")
+        self.assertIn("price_position", evidence)
+        self.assertIn("underpricing_score", evidence)
+        self.assertIn("competition_pressure", evidence)
+        self.assertIn("liquidity_details", evidence)
+        self.assertIn("listing_quality_score", evidence)
+        self.assertIn("description_risk_details", evidence)
+        self.assertFalse(evidence["extreme_underprice_risk"])
 
 
 if __name__ == "__main__":

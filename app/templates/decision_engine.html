@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Decision Engine · Market Analyzer{% endblock %}
+{% block eyebrow %}Decision Engine{% endblock %}
+{% block page_title %}Decisiones de compra{% endblock %}
+
+{% block content %}
+<section id="decision-engine-component" class="decision-component" data-endpoint="/decision-engine">
+    <section class="decision-summary-grid" aria-live="polite">
+        <article class="decision-summary-card glass-soft">
+            <span class="metric-label">Capital</span>
+            <strong data-summary="capital_available">--</strong>
+        </article>
+        <article class="decision-summary-card glass-soft">
+            <span class="metric-label">Invertido</span>
+            <strong data-summary="capital_used">--</strong>
+        </article>
+        <article class="decision-summary-card glass-soft">
+            <span class="metric-label">Profit esperado</span>
+            <strong class="good" data-summary="expected_profit">--</strong>
+        </article>
+        <article class="decision-summary-card glass-soft">
+            <span class="metric-label">Capital libre</span>
+            <strong data-summary="capital_remaining">--</strong>
+        </article>
+    </section>
+
+    <section class="decision-layout">
+        <article class="panel glass decision-primary-panel">
+            <div class="panel-head">
+                <div>
+                    <p class="eyebrow">Comprar ahora</p>
+                    <h3>BUY PLAN</h3>
+                </div>
+                <span class="decision-status decision-status-buy">comprar</span>
+            </div>
+            <div id="buy-plan-list" class="decision-card-list"></div>
+        </article>
+
+        <aside class="panel glass">
+            <div class="panel-head">
+                <div>
+                    <p class="eyebrow">Control</p>
+                    <h3>SUMMARY</h3>
+                </div>
+            </div>
+            <div id="summary-panel" class="decision-summary-panel"></div>
+        </aside>
+    </section>
+
+    <section class="decision-layout decision-layout-secondary">
+        <article class="panel glass">
+            <div class="panel-head">
+                <div>
+                    <p class="eyebrow">Candidatos</p>
+                    <h3>SHORTLIST</h3>
+                </div>
+                <span id="shortlist-count" class="muted">--</span>
+            </div>
+            <div id="shortlist-list" class="decision-card-list compact"></div>
+        </article>
+
+        <article class="panel glass">
+            <div class="panel-head">
+                <div>
+                    <p class="eyebrow">Antes de pagar</p>
+                    <h3>VALIDATION</h3>
+                </div>
+                <span class="decision-status decision-status-review">revisar</span>
+            </div>
+            <div id="validation-list" class="decision-card-list compact"></div>
+        </article>
+    </section>
+</section>
+
+<script>
+class DecisionEngineComponent {
+    constructor(root) {
+        this.root = root;
+        this.endpoint = root.dataset.endpoint;
+        this.formatter = new Intl.NumberFormat("es-ES", {
+            style: "currency",
+            currency: "EUR"
+        });
+    }
+
+    async mount() {
+        this.setLoading();
+        try {
+            const response = await fetch(this.endpoint, { headers: { "Accept": "application/json" } });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            this.render(await response.json());
+        } catch (error) {
+            this.renderError(error);
+        }
+    }
+
+    setLoading() {
+        this.byId("buy-plan-list").innerHTML = this.emptyState("Cargando decision engine...");
+        this.byId("shortlist-list").innerHTML = "";
+        this.byId("validation-list").innerHTML = "";
+        this.byId("summary-panel").innerHTML = "";
+    }
+
+    render(payload) {
+        this.renderSummary(payload.summary || {});
+        this.renderBuyPlan(payload.buy_plan || []);
+        this.renderShortlist(payload.shortlist || []);
+        this.renderValidation(payload.validation || []);
+    }
+
+    renderSummary(summary) {
+        this.setSummaryValue("capital_available", this.money(summary.capital_available));
+        this.setSummaryValue("capital_used", this.money(summary.capital_used));
+        this.setSummaryValue("expected_profit", this.money(summary.expected_profit));
+        this.setSummaryValue("capital_remaining", this.money(summary.capital_remaining));
+
+        this.byId("summary-panel").innerHTML = `
+            <div class="decision-meter">
+                <span>ROI cartera</span>
+                <strong>${this.percent(summary.roi_total)}</strong>
+            </div>
+            <div class="decision-meter">
+                <span>Capital usado</span>
+                <strong>${this.money(summary.capital_used)}</strong>
+            </div>
+            <div class="decision-meter">
+                <span>Capital restante</span>
+                <strong>${this.money(summary.capital_remaining)}</strong>
+            </div>
+        `;
+    }
+
+    renderBuyPlan(items) {
+        const target = this.byId("buy-plan-list");
+        if (!items.length) {
+            target.innerHTML = this.emptyState("No hay oportunidades seguras ahora");
+            return;
+        }
+
+        target.innerHTML = items.map((item) => `
+            <article class="decision-card decision-card-buy">
+                <div class="decision-card-head">
+                    <div>
+                        <h4>${this.escape(item.title)}</h4>
+                        <p class="muted">${this.escape(item.investment_reason || "Compra aprobada")}</p>
+                    </div>
+                    ${item.high_conviction ? `<span class="decision-badge buy">HIGH CONVICTION</span>` : `<span class="decision-badge review">BUY</span>`}
+                </div>
+                <div class="decision-values">
+                    <span><small>Precio</small><strong>${this.money(item.buy_price)}</strong></span>
+                    <span><small>ROI</small><strong>${this.percent(item.roi)}</strong></span>
+                    <span><small>Profit</small><strong>${this.money(item.expected_profit)}</strong></span>
+                </div>
+                <a class="decision-link" href="${this.escape(item.url || "#")}" target="_blank" rel="noreferrer">Abrir anuncio</a>
+            </article>
+        `).join("");
+    }
+
+    renderShortlist(items) {
+        this.byId("shortlist-count").textContent = `${items.length} candidatos`;
+        const target = this.byId("shortlist-list");
+        if (!items.length) {
+            target.innerHTML = this.emptyState("La shortlist esta vacia");
+            return;
+        }
+
+        target.innerHTML = items.slice(0, 6).map((item) => {
+            const evidence = item.evidence || {};
+            return `
+                <article class="decision-card decision-card-compact">
+                    <div>
+                        <h4>${this.escape(item.title)}</h4>
+                        <p class="muted">${this.escape(evidence.speed_category || "speed n/d")} · ${this.escape(item.confidence || "confidence n/d")}</p>
+                    </div>
+                    <div class="decision-values compact-values">
+                        <span><small>Precio</small><strong>${this.money(item.buy_price)}</strong></span>
+                        <span><small>ROI</small><strong>${this.percent(evidence.roi)}</strong></span>
+                        <span><small>Profit</small><strong>${this.money(item.profit_estimate)}</strong></span>
+                    </div>
+                </article>
+            `;
+        }).join("");
+    }
+
+    renderValidation(items) {
+        const target = this.byId("validation-list");
+        if (!items.length) {
+            target.innerHTML = this.emptyState("No hay compras que validar");
+            return;
+        }
+
+        target.innerHTML = items.map((item) => {
+            const opportunity = item.opportunity || {};
+            const validation = item.validation || {};
+            const warnings = validation.warnings || [];
+            const tone = validation.safe_to_buy ? "buy" : "avoid";
+            return `
+                <article class="decision-card decision-card-validation">
+                    <div class="decision-card-head">
+                        <h4>${this.escape(opportunity.title || "Oportunidad")}</h4>
+                        <span class="decision-badge ${tone}">${validation.safe_to_buy ? "SAFE TO BUY" : "EVITAR"}</span>
+                    </div>
+                    <p class="muted">${this.escape(validation.notes || "Sin notas")}</p>
+                    <div class="decision-warning-list">
+                        ${warnings.length ? warnings.map((warning) => `<span>${this.escape(warning)}</span>`).join("") : "<span>Sin warnings</span>"}
+                    </div>
+                </article>
+            `;
+        }).join("");
+    }
+
+    renderError(error) {
+        this.byId("buy-plan-list").innerHTML = this.emptyState(`No se pudo cargar Decision Engine: ${error.message}`);
+    }
+
+    byId(id) {
+        return document.getElementById(id);
+    }
+
+    setSummaryValue(key, value) {
+        const node = this.root.querySelector(`[data-summary="${key}"]`);
+        if (node) {
+            node.textContent = value;
+        }
+    }
+
+    money(value) {
+        const number = Number(value || 0);
+        return this.formatter.format(number);
+    }
+
+    percent(value) {
+        const number = Number(value || 0);
+        return `${Math.round(number * 100)}%`;
+    }
+
+    emptyState(message) {
+        return `<div class="decision-empty glass-soft">${this.escape(message)}</div>`;
+    }
+
+    escape(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[char]));
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const root = document.getElementById("decision-engine-component");
+    if (root) {
+        new DecisionEngineComponent(root).mount();
+    }
+});
+</script>
+{% endblock %}

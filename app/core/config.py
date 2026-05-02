@@ -53,6 +53,18 @@ class Settings:
     arbitrage_fee_rate: float
     arbitrage_profit_threshold: float
     arbitrage_min_comparables: int
+    analyzer_max_volatility_ratio: float
+    analyzer_profit_weight: float
+    analyzer_confidence_weight: float
+    analyzer_liquidity_weight: float
+    analyzer_urgency_weight: float
+    analyzer_speed_weight: float
+    analyzer_capital_weight: float
+    analyzer_risk_weight: float
+    analyzer_competition_weight: float
+    capital_strategy_available: float
+    capital_strategy_high_conviction_buy_score: float
+    capital_strategy_high_conviction_max_ratio: float
 
 
 @lru_cache(maxsize=1)
@@ -86,4 +98,22 @@ def get_settings() -> Settings:
         arbitrage_fee_rate=_get_float("MARKET_ANALYZER_ARBITRAGE_FEE_RATE", 0.13),
         arbitrage_profit_threshold=_get_float("MARKET_ANALYZER_ARBITRAGE_PROFIT_THRESHOLD", 20.0),
         arbitrage_min_comparables=_get_int("MARKET_ANALYZER_ARBITRAGE_MIN_COMPARABLES", 3),
+        analyzer_max_volatility_ratio=_get_float("MARKET_ANALYZER_MAX_VOLATILITY_RATIO", 0.45),
+        analyzer_profit_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_PROFIT", 1.7),
+        analyzer_confidence_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_CONFIDENCE", 3.5),
+        analyzer_liquidity_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_LIQUIDITY", 2.0),
+        analyzer_urgency_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_URGENCY", 2.5),
+        analyzer_speed_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_SPEED", 4.0),
+        analyzer_capital_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_CAPITAL", 8.0),
+        analyzer_risk_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_RISK", 4.0),
+        analyzer_competition_weight=_get_float("MARKET_ANALYZER_SCORE_WEIGHT_COMPETITION", 1.8),
+        capital_strategy_available=_get_float("MARKET_ANALYZER_CAPITAL_AVAILABLE", 500.0),
+        capital_strategy_high_conviction_buy_score=_get_float(
+            "MARKET_ANALYZER_HIGH_CONVICTION_BUY_SCORE",
+            30.0,
+        ),
+        capital_strategy_high_conviction_max_ratio=_get_float(
+            "MARKET_ANALYZER_HIGH_CONVICTION_MAX_RATIO",
+            0.85,
+        ),
     )

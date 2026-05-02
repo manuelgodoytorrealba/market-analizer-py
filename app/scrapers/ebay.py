@@ -9,7 +9,7 @@ from collections import Counter
 import requests
 from bs4 import BeautifulSoup
 
-from app.config import get_settings
+from app.core.config import get_settings
 from app.scrapers.base import BaseScraper
 from app.scrapers.ebay_api import EbayAPIProvider
 from app.services.normalizer import extract_iphone_specs, infer_condition
