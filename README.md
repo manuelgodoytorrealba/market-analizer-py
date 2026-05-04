@@ -267,18 +267,5 @@ Antes de contribuir:
 * respetar la separación de capas
 * evitar lógica mezclada
 
----
 
-## 📄 License
-
-MIT (o la que tú quieras definir)
-
----
-
-## 🔥 Final Thought
-
-> Este proyecto no trata de scraping.
-> Trata de tomar mejores decisiones que el mercado.
-
----
 
