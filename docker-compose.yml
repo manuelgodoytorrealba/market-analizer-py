@@ -1,7 +1,8 @@
 services:
-  app:
+  web:
     build: .
-    container_name: market-analyzer
+    container_name: market-analyzer-web
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
@@ -9,4 +10,18 @@ services:
     volumes:
       - ./data:/app/data
     command: >
-      sh -c " python -m scripts.cli init-db && python -m scripts.cli runtime & python -m scripts.cli serve --host 0.0.0.0 --port 8000 --reload "
+      sh -c "python -m scripts.cli init-db &&
+             python -m scripts.cli serve --host 0.0.0.0 --port 8000"
+
+  bot:
+    build: .
+    container_name: market-analyzer-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    command: >
+      sh -c "python -m scripts.cli runtime"
+    depends_on:
+      - web

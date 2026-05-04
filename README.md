@@ -108,12 +108,14 @@ Deal Validator → evalúa riesgos
 git clone <repo-url>
 cd market-analyzer
 
-python -m venv .venv
+.\.venv\Scripts\Activate.ps1 #windowspy este es el que funciona en windows
+python -m venv .venv  #windowspy
 source .venv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
 
 python scripts/setup.py
 python scripts/init_db.py
+python -m scripts.init_db // windows
 ```
 
 ---
@@ -124,6 +126,8 @@ python scripts/init_db.py
 
 ```bash
 python scripts/run_scrapers.py --source wallapop
+
+ python -m scripts.run_scrapers --source wallapop   //windows
 ```
 
 ---
@@ -132,6 +136,8 @@ python scripts/run_scrapers.py --source wallapop
 
 ```bash
 python scripts/inspect_opportunities.py
+
+ python -m scripts.inspect_opportunities // windows
 ```
 
 Obtendrás:
