@@ -1,373 +1,140 @@
+# Onboarding
 
+Welcome to Market Analyzer. The project helps find things on Wallapop that might be worth buying and reselling.
 
-⸻
+The goal is not to find every cheap item. The goal is to find the few items that are cheap, sellable and not too risky.
 
-🧠 Market Analyzer — Onboarding
+## What The System Does
 
-⸻
+In simple terms:
 
-⚡ TL;DR (30s mental model)
+1. It searches Wallapop.
+2. It cleans product names so similar products can be compared.
+3. It stores listings in the database.
+4. It calculates market prices and profit.
+5. It filters down to realistic buy candidates.
+6. It decides what to buy with limited capital.
+7. It gives a final checklist before buying.
 
-Find → Analyze → Filter → Decide → Validate → Buy
+## Main Parts
 
-Market Analyzer is not a scraper.
+Scrapers get data from marketplaces.
 
-It is a decision system that answers:
+Normalizer cleans names and decides category/subcategory.
 
-👉 Should I buy this item to resell it?
+Persistence saves listings and opportunities.
 
-⸻
+Analyzer finds possible opportunities using market signals.
 
-🧠 Product Definition (Phase 0 — Manuel)
+BUY SHORTLIST keeps only serious buy candidates.
 
-⸻
+CAPITAL STRATEGY decides what to buy with the available budget.
 
-🎯 Vision
+DEAL VALIDATOR gives manual warnings before spending money.
 
-Build a system that:
+## Setup
 
-* finds real reselling opportunities
-* filters noise, scams and low-quality deals
-* prioritizes high-confidence decisions
-* uses capital efficiently
-* reduces manual thinking
+From the project root:
 
-⸻
-
-💡 What Is A Real Opportunity?
-
-A “real opportunity” is NOT just a cheap product.
-
-It must pass business constraints:
-
-✔ Profit ≥ 30€
-✔ ROI ≥ 30%
-✔ High liquidity (fast resale)
-✔ Medium or low risk
-✔ Enough comparables (confidence)
-
-⸻
-
-🚫 If any of these fail:
-
-→ NOT a real opportunity
-
-⸻
-
-🧪 Mental Filter (quick decision)
-
-Is it cheap? → ❌ not enough
-Is it profitable? → 🟡 maybe
-Is it sellable FAST? → ✅ now we care
-Is risk controlled? → ✅ now it's real
-
-⸻
-
-⚠️ Current Limitations
-
-Right now the system is:
-
-Wallapop → internal comparison
-
-So:
-
-* ❌ no cross-market validation
-* ❌ liquidity is estimated
-* ❌ risk is heuristic
-* ❌ profit can be optimistic
-* ❌ confidence is not fully modeled
-
-⸻
-
-🧭 Product Direction
-
-We are building:
-
-multi-market intelligence platform
-
-Future:
-
-* Wallapop ↔ eBay validation
-* real liquidity signals
-* better risk scoring
-* capital optimization
-* confidence-based ranking
-
-⸻
-
-🧱 Product Philosophy
-
-Always prefer:
-
-✔ fewer but better opportunities
-✔ explainable decisions
-✔ realistic profit
-✔ capital protection
-
-⸻
-
-🔄 What The System Does
-
-⸻
-
-1. Scrape → get listings
-2. Normalize → clean product names
-3. Store → database
-4. Analyze → find signals
-5. Filter → shortlist real deals
-6. Decide → allocate capital
-7. Validate → final checklist
-
-⸻
-
-🧩 Main Parts (System Map)
-
-⸻
-
-🕷 Scrapers
-
-Get data from marketplaces.
-
-⸻
-
-🧼 Normalizer
-
-Turns messy titles into comparable products.
-
-"iphone 13 pro 128gb azul como nuevo"
-→ iPhone 13 Pro 128GB
-
-⸻
-
-💾 Persistence
-
-Stores listings and opportunities.
-
-⸻
-
-📊 Analyzer
-
-Finds possible opportunities using:
-
-* price gaps
-* comparables
-* market signals
-
-⸻
-
-🎯 BUY SHORTLIST
-
-Filters to real buy candidates
-
-⸻
-
-💰 CAPITAL STRATEGY
-
-Answers:
-
-What should I buy with limited money?
-
-⸻
-
-⚠️ DEAL VALIDATOR
-
-Final human checklist before paying.
-
-⸻
-
-🧠 Decision Flow (IMPORTANT)
-
-⸻
-
-Listings
-  ↓
-Analyzer (many ideas)
-  ↓
-Shortlist (serious only)
-  ↓
-Capital Strategy (what to buy)
-  ↓
-Deal Validator (human sanity check)
-
-⸻
-
-🚀 Setup
-
-From project root:
-
+```bash
 python3 scripts/setup.py
+```
 
-If DB does not exist:
+If the database does not exist:
 
+```bash
 .venv/bin/python scripts/init_db.py
+```
 
-⸻
+## Run A Full Cycle
 
-🔁 Run Full Cycle
+Scrape Wallapop and refresh opportunities:
 
-⸻
-
-1. Scrape
-
+```bash
 python3 scripts/run_scrapers.py --source wallapop
+```
 
-⸻
+Inspect results:
 
-2. Inspect
-
+```bash
 python3 scripts/inspect_opportunities.py
+```
 
-⸻
+## How To Read The Output
 
-📊 How To Read The Output
+`TOP OPPORTUNITIES (ALL)` shows analyzer results. These can still include risky items, slow markets or listings with weak confidence.
 
-⸻
+`BUY SHORTLIST (REAL DECISIONS)` shows opportunities that passed stronger business filters.
 
-🔝 TOP OPPORTUNITIES (ALL)
+`BUY PLAN (CAPITAL 500EUR)` shows what the system would actually buy with the configured capital.
 
-🟡 raw analyzer output
-⚠️ can include risky or weak deals
+`DEAL VALIDATION` shows the final manual checklist before paying.
 
-⸻
+`DISCARDED FROM BUY SHORTLIST` explains why top analyzer items were rejected.
 
-🟢 BUY SHORTLIST (REAL DECISIONS)
+## Real Example
 
-✅ filtered with business rules
-👉 THESE are serious candidates
+With `500 EUR`, the system currently chooses:
 
-⸻
+```text
+MacBook Pro M1 2020 Plata
+Buy: 420 EUR
+Expected profit: 87.50 EUR
+Capital remaining: 80 EUR
+Portfolio ROI: 0.21
+```
 
-💰 BUY PLAN (CAPITAL)
+Why?
 
-🧠 final decision with money constraints
+It has high confidence, low risk, medium market speed and enough ROI. Because it is high conviction, CAPITAL STRATEGY allows a larger allocation than usual.
 
-⸻
+What still needs manual checking?
 
-⚠️ DEAL VALIDATION
+- battery health
+- physical condition
+- charger included
+- serial number and lock/MDM status
+- more photos if the listing is short
 
-🔍 final checklist before buying
+The system says: this is buyable, but do the checklist before paying.
 
-⸻
+## Useful Commands
 
-❌ DISCARDED
+Run tests that are relevant to the decision layers:
 
-💡 explains WHY things were rejected
-
-⸻
-
-🧪 Real Example
-
-⸻
-
-MacBook Pro M1 2020
-Buy: 420€
-Expected profit: 87.50€
-ROI: 21%
-
-⸻
-
-🤔 Why selected?
-
-* high confidence
-* low risk
-* medium liquidity
-* strong signal
-
-⸻
-
-⚠️ Still check manually:
-
-* battery health
-* physical condition
-* charger
-* serial / MDM lock
-* real photos
-
-⸻
-
-System says: BUYABLE
-Human says: VERIFY
-
-⸻
-
-🧰 Useful Commands
-
-⸻
-
-Run decision-layer tests
-
+```bash
 PYTHONPATH=. .venv/bin/python -m unittest \
   tests.test_buy_shortlist \
   tests.test_capital_strategy \
   tests.test_deal_validator \
   tests.test_decision_engine \
   -v
+```
 
-⸻
+Compile Python files:
 
-Compile code
-
+```bash
 PYTHONPATH=. .venv/bin/python -m compileall app scripts tests
+```
 
-⸻
+Change available capital:
 
-Change capital
+```bash
+MARKET_ANALYZER_CAPITAL_AVAILABLE=800 python3 scripts/inspect_opportunities.py
+```
 
-MARKET_ANALYZER_CAPITAL_AVAILABLE=800 \
-python3 scripts/inspect_opportunities.py
+## Rules For New Development
 
-⸻
+Do not put business logic in templates.
 
-🧪 Quick Health Check (DEV)
+Do not scrape inside dashboard or API handlers.
 
-⸻
+Do not change analyzer thresholds without explaining the business impact.
 
-✔ init-db works
-✔ scrapers return data
-✔ analyzer produces output
-✔ shortlist is not empty
-✔ capital strategy runs
+Keep changes small and testable.
 
-⸻
+When in doubt, follow the data:
 
-📏 Rules For Development
-
-⸻
-
-❌ DO NOT
-
-* put logic in templates
-* scrape inside API/dashboard
-* change thresholds without reason
-
-⸻
-
-✅ DO
-
-* keep logic in services
-* keep changes small
-* test decision layers
-* follow the pipeline
-
-⸻
-
-scraper → normalizer → database → analyzer → shortlist → capital → validation
-
-⸻
-
-🧠 Final Mental Model
-
-⸻
-
-This is NOT a scraper.
-This is a system that protects your money.
-
-⸻
-
-Bad system → buys everything cheap
-Good system → buys only what sells
-Great system → buys only what is safe + profitable
-
-⸻
-
-
+```text
+scraper -> normalizer -> database -> analyzer -> shortlist -> capital -> validation
+```

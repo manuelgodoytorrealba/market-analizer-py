@@ -1,5 +1,5 @@
 app
 data
-docs
+logs
 scripts
 tests

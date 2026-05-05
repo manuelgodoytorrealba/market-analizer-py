@@ -9,8 +9,6 @@
 
 ---
 
-It lives here http://192.168.1.10:8000
-
 ## ✨ Overview
 
 **Market Analyzer** es un sistema diseñado para detectar, analizar y validar oportunidades de reventa en marketplaces como Wallapop.
@@ -110,14 +108,12 @@ Deal Validator → evalúa riesgos
 git clone <repo-url>
 cd market-analyzer
 
-.\.venv\Scripts\Activate.ps1 #windowspy este es el que funciona en windows
-python -m venv .venv  #windowspy
+python -m venv .venv
 source .venv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
 
 python scripts/setup.py
 python scripts/init_db.py
-python -m scripts.init_db // windows
 ```
 
 ---
@@ -128,8 +124,6 @@ python -m scripts.init_db // windows
 
 ```bash
 python scripts/run_scrapers.py --source wallapop
-
- python -m scripts.run_scrapers --source wallapop   //windows
 ```
 
 ---
@@ -138,8 +132,6 @@ python scripts/run_scrapers.py --source wallapop
 
 ```bash
 python scripts/inspect_opportunities.py
-
- python -m scripts.inspect_opportunities // windows
 ```
 
 Obtendrás:
@@ -269,5 +261,18 @@ Antes de contribuir:
 * respetar la separación de capas
 * evitar lógica mezclada
 
+---
 
+## 📄 License
+
+MIT (o la que tú quieras definir)
+
+---
+
+## 🔥 Final Thought
+
+> Este proyecto no trata de scraping.
+> Trata de tomar mejores decisiones que el mercado.
+
+---
 
