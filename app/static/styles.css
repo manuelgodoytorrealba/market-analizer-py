@@ -865,3 +865,56 @@ h4 {
         min-width: 640px;
     }
 }
+
+/* 🔘 botón toggle */
+.sidebar-toggle {
+    display: none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* 📱 MOBILE */
+@media (max-width: 1180px) {
+
+    .sidebar-toggle {
+        display: block;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* overlay oscuro */
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        display: none;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+}
