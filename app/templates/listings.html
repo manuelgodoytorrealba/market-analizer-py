@@ -109,6 +109,35 @@
 
         <article class="evidence-box glass-soft">
             <div class="panel-head">
+                <h4>Feedback de review</h4>
+                {% if selected_feedback %}
+                <span class="muted">guardado</span>
+                {% else %}
+                <span class="muted">pendiente</span>
+                {% endif %}
+            </div>
+            <p class="muted">Este feedback se guarda para construir dataset y reentrenar el clasificador más adelante.</p>
+            <form method="post" action="/listings/{{ selected_listing.id }}/feedback" class="feedback-form">
+                <select name="feedback_label" required>
+                    {% for feedback_label in feedback_labels %}
+                    <option value="{{ feedback_label }}" {% if selected_feedback and selected_feedback.feedback_label == feedback_label %}selected{% endif %}>
+                        {{ feedback_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <textarea name="feedback_notes" rows="3" placeholder="Nota opcional para explicar por qué">{{ selected_feedback.feedback_notes if selected_feedback else "" }}</textarea>
+                <button type="submit" class="decision-button accept">Guardar feedback</button>
+            </form>
+            {% if selected_feedback %}
+            <ul class="meta-list meta-list-tight">
+                <li>Etiqueta actual: {{ selected_feedback.feedback_label }}</li>
+                <li>Última revisión: {{ selected_feedback.updated_at or "n/d" }}</li>
+            </ul>
+            {% endif %}
+        </article>
+
+        <article class="evidence-box glass-soft">
+            <div class="panel-head">
                 <h4>Oportunidades ligadas</h4>
                 <span class="muted">{{ related_opportunities|length }}</span>
             </div>

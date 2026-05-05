@@ -104,3 +104,23 @@ class ScrapeRun(Base):
     notes = Column(Text, nullable=True)
     started_at = Column(DateTime, default=datetime.utcnow)
     finished_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ListingFeedback(Base):
+    __tablename__ = "listing_feedback"
+    __table_args__ = (
+        UniqueConstraint("listing_id", name="uq_listing_feedback_listing_id"),
+        Index("ix_listing_feedback_label", "feedback_label"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, nullable=False)
+    source = Column(String, nullable=False)
+    external_id = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    normalized_name = Column(String, nullable=True)
+    search_query = Column(String, nullable=True)
+    feedback_label = Column(String, nullable=False)
+    feedback_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

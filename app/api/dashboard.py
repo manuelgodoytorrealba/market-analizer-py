@@ -2,14 +2,15 @@ import json
 from collections import Counter
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models.entities import Listing, Opportunity, ScrapeRun
+from app.models.entities import Listing, ListingFeedback, Opportunity, ScrapeRun
+from app.services.feedback import FEEDBACK_LABELS, get_listing_feedback, save_listing_feedback
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -134,6 +135,12 @@ def listings_view(request: Request):
             {
                 "listings": listings,
                 "selected_listing": selected,
+                "selected_feedback": (
+                    get_listing_feedback(db, listing_id=int(selected.id))
+                    if selected is not None
+                    else None
+                ),
+                "feedback_labels": FEEDBACK_LABELS,
                 "related_opportunities": related_opportunities,
                 "filters": _listing_filters_snapshot(request),
             }
@@ -146,6 +153,35 @@ def listings_view(request: Request):
         )
     finally:
         db.close()
+
+
+@router.post("/listings/{listing_id}/feedback")
+def update_listing_feedback(
+    listing_id: int,
+    request: Request,
+    feedback_label: str = Form(...),
+    feedback_notes: str = Form(""),
+):
+    db: Session = SessionLocal()
+    try:
+        listing = db.query(Listing).filter(Listing.id == listing_id).first()
+        if listing is None:
+            raise HTTPException(status_code=404, detail="Listing not found")
+
+        try:
+            save_listing_feedback(
+                db,
+                listing=listing,
+                feedback_label=feedback_label,
+                feedback_notes=feedback_notes,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        db.close()
+
+    redirect_target = request.headers.get("referer") or f"/listings?listing_id={listing_id}"
+    return RedirectResponse(url=redirect_target, status_code=303)
 
 
 @router.post("/opportunities/{opportunity_id}/decision")

@@ -61,6 +61,7 @@ def validate_deal(opportunity: Opportunity) -> DealValidation:
     risk_score = _as_float(evidence.get("risk_score"))
     price = _as_float(evidence.get("item_price") or opportunity.buy_price)
     p25 = _as_float(evidence.get("p25"))
+    semantic = evidence.get("semantic") if isinstance(evidence.get("semantic"), dict) else {}
     warnings: list[str] = []
 
     if _looks_too_cheap(price, p25):
@@ -75,6 +76,12 @@ def validate_deal(opportunity: Opportunity) -> DealValidation:
         if term in combined_text:
             warnings.append(f"posible defecto: revisar '{term}'")
             break
+
+    if semantic.get("is_damaged_or_parts_only"):
+        warnings.append("semantic: listing dañada o solo piezas")
+
+    if semantic.get("is_target_match") is False:
+        warnings.append("semantic: posible accesorio o producto distinto")
 
     if not description.strip() or len(combined_text) < SPARSE_TEXT_LENGTH:
         warnings.append("listing pobre: poca informacion para validar estado")

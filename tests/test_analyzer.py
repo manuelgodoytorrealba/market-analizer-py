@@ -430,52 +430,24 @@ class AnalyzerTests(unittest.TestCase):
 
         self.assertEqual(opportunities, [])
 
-    def test_analyzer_evidence_includes_v3_market_signals(self) -> None:
+    def test_analyzer_evidence_includes_pricing_and_semantic_signals(self) -> None:
         listings = [
             Listing(
-                id=301,
+                id=301 + index,
                 source="wallapop",
-                external_id="w301",
-                title="iPhone 13 128GB urgente",
+                external_id=f"w{301 + index}",
+                title=(
+                    "iPhone 13 128GB urgente"
+                    if index == 0
+                    else f"iPhone 13 128GB color {index}"
+                ),
                 normalized_name="iphone 13 128gb",
-                price=190.0,
+                price=280.0 if index == 0 else 300.0 + (index * 3.0),
                 shipping_cost=7.0,
-                url="https://example.com/w301",
+                url=f"https://example.com/w{301 + index}",
                 is_active=True,
-            ),
-            Listing(
-                id=302,
-                source="wallapop",
-                external_id="w302",
-                title="iPhone 13 128GB negro",
-                normalized_name="iphone 13 128gb",
-                price=250.0,
-                shipping_cost=7.0,
-                url="https://example.com/w302",
-                is_active=True,
-            ),
-            Listing(
-                id=303,
-                source="wallapop",
-                external_id="w303",
-                title="iPhone 13 128GB blanco",
-                normalized_name="iphone 13 128gb",
-                price=255.0,
-                shipping_cost=7.0,
-                url="https://example.com/w303",
-                is_active=True,
-            ),
-            Listing(
-                id=304,
-                source="wallapop",
-                external_id="w304",
-                title="iPhone 13 128GB azul",
-                normalized_name="iphone 13 128gb",
-                price=260.0,
-                shipping_cost=7.0,
-                url="https://example.com/w304",
-                is_active=True,
-            ),
+            )
+            for index in range(11)
         ]
         setattr(listings[0], "description", "Venta rápida, funciona perfectamente")
 
@@ -483,13 +455,19 @@ class AnalyzerTests(unittest.TestCase):
         opportunity = opportunities[0]
         evidence = json.loads(opportunity.evidence_json)
 
-        self.assertEqual(opportunity.metric_name, "wallapop_flipping_v3")
+        self.assertEqual(opportunity.metric_name, "wallapop_flipping_v5")
         self.assertIn("price_position", evidence)
         self.assertIn("underpricing_score", evidence)
         self.assertIn("competition_pressure", evidence)
         self.assertIn("liquidity_details", evidence)
         self.assertIn("listing_quality_score", evidence)
         self.assertIn("description_risk_details", evidence)
+        self.assertIn("mean_price", evidence)
+        self.assertIn("mode_price", evidence)
+        self.assertIn("pricing_reference", evidence)
+        self.assertIn("semantic", evidence)
+        self.assertIn("is_target_match", evidence["semantic"])
+        self.assertIn("is_damaged_or_parts_only", evidence["semantic"])
         self.assertFalse(evidence["extreme_underprice_risk"])
 
 

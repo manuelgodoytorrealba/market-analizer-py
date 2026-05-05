@@ -133,6 +133,9 @@ def _migrate_sqlite_schema() -> None:
         conn.exec_driver_sql(
             "CREATE INDEX IF NOT EXISTS ix_opportunities_score ON opportunities (score)"
         )
+        conn.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS ix_listing_feedback_label ON listing_feedback (feedback_label)"
+        )
         _ensure_column_exists(conn, "listings", "search_query", "VARCHAR")
         _ensure_column_exists(conn, "listings", "currency", "VARCHAR")
         _ensure_column_exists(conn, "listings", "image_url", "TEXT")

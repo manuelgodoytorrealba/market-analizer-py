@@ -7,6 +7,7 @@
 ## Assumptions
 - Assumption: el runtime puede ejecutarse por ciclos con `scripts.cli runtime`.
 - Assumption: la salida del dashboard depende de lo persistido en SQLite.
+- Assumption: la semantica ligera corre en el mismo bot, sin servicio aparte.
 
 ## Diagram
 
@@ -17,6 +18,7 @@ sequenceDiagram
     participant Runtime as app/services/runtime.py
     participant Scrapers as app/scrapers
     participant Normalizer as normalizer.py
+    participant Semantic as semantic_classifier.py
     participant Persistence as persistence.py
     participant Analyzer as analyzer.py
     participant Decision as decision_engine.py
@@ -35,7 +37,8 @@ sequenceDiagram
         Runtime->>Normalizer: normalizar solo lo recuperable
     end
 
-    Normalizer-->>Persistence: listings válidos
+    Normalizer->>Semantic: evaluar target_match y daño
+    Semantic-->>Persistence: listings con señal semantica
     Persistence->>DB: insert/update/deactivate + scrape_run
     Persistence-->>Analyzer: dataset persistido
     Analyzer->>DB: leer comparables activos
@@ -49,3 +52,4 @@ sequenceDiagram
 ## Notes
 - El dashboard no hace scraping.
 - El runtime tolera fallos parciales por fuente.
+- La semantica se puede entrenar o sustituir sin mover el resto del flujo.

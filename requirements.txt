@@ -5,6 +5,7 @@ sqlalchemy
 python-dotenv
 playwright
 pydantic
+python-multipart
 aiofiles
 httpx
 beautifulsoup4

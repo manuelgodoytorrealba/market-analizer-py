@@ -1,7 +1,7 @@
 import json
 import re
 from dataclasses import dataclass
-from statistics import median
+from statistics import fmean, median
 from typing import Iterable
 
 from app.core.config import get_settings
@@ -17,6 +17,10 @@ from app.services.normalizer import (
     detect_category,
     detect_category_confidence,
     detect_subcategory,
+)
+from app.services.semantic_classifier import (
+    SemanticClassification,
+    classify_listing_semantics,
 )
 
 SHIPPING_ESTIMATE_EUR = 10.0
@@ -39,7 +43,10 @@ CATEGORY_MIN_COMPARABLES = {
 
 @dataclass(frozen=True)
 class MarketStats:
+    mean_price: float
     median_price: float
+    mode_price: float
+    mode_count: int
     p25: float
     p75: float
     spread: float
@@ -97,14 +104,19 @@ def build_market_stats(prices: list[float]) -> MarketStats | None:
         return None
 
     sorted_prices = sorted(clean_prices)
+    mean_price = float(fmean(sorted_prices))
     median_price = float(median(sorted_prices))
+    mode_price, mode_count = _mode_bucket(sorted_prices)
     p25 = _percentile(sorted_prices, 25)
     p75 = _percentile(sorted_prices, 75)
     spread = p75 - p25
     volatility_ratio = spread / median_price if median_price > 0 else 1.0
 
     return MarketStats(
+        mean_price=round(mean_price, 2),
         median_price=round(median_price, 2),
+        mode_price=round(mode_price, 2),
+        mode_count=mode_count,
         p25=round(p25, 2),
         p75=round(p75, 2),
         spread=round(spread, 2),
@@ -525,6 +537,9 @@ def analyze_opportunities(listings: Iterable[Listing]) -> list[Opportunity]:
     for item in listings:
         if not is_valid_listing(item):
             continue
+        semantic_result = classify_listing_semantics(item)
+        if not semantic_result.is_target_match or semantic_result.is_damaged_or_parts_only:
+            continue
 
         comparable_key = build_comparable_key(
             item.title,
@@ -563,6 +578,7 @@ def analyze_opportunities(listings: Iterable[Listing]) -> list[Opportunity]:
                 comparable_key=comparable_key,
                 stats=stats,
                 comparables=items,
+                semantic_result=semantic_result,
             )
 
             if opportunity:
@@ -578,6 +594,7 @@ def _build_opportunity(
     comparable_key: str,
     stats: MarketStats,
     comparables: list[Listing],
+    semantic_result: SemanticClassification,
 ) -> Opportunity | None:
     settings = get_settings()
     item_price = float(item.price)
@@ -597,6 +614,7 @@ def _build_opportunity(
         stats=stats,
         comparables=comparables,
         profit_estimate=profit_estimate,
+        semantic_result=semantic_result,
     )
     score = _score_opportunity(profit_estimate=profit_estimate, signals=signals)
 
@@ -608,6 +626,7 @@ def _build_opportunity(
         discount_pct=discount_pct,
         signals=signals,
         comparables=comparables,
+        semantic_result=semantic_result,
     )
 
     confidence_label = _build_confidence_label(
@@ -637,7 +656,7 @@ def _build_opportunity(
         confidence=confidence_label,
         metric_name="wallapop_flipping_v5",
         reasoning_summary=(
-            f"{item_price}€ vs {stats.median_price}€ median | "
+            f"{item_price}€ vs mean {stats.mean_price}€ / median {stats.median_price}€ / mode {stats.mode_price}€ | "
             f"profit {profit_estimate}€ | roi {signals.roi} | "
             f"capital {signals.capital_efficiency_score} | confidence {signals.confidence_score} | "
             f"risk {signals.risk_score} | competition {signals.competition_pressure} | "
@@ -655,8 +674,11 @@ def _build_signals(
     stats: MarketStats,
     comparables: list[Listing],
     profit_estimate: float,
+    semantic_result: SemanticClassification,
 ) -> OpportunitySignals:
     category_filter = evaluate_category_listing(item)
+    listing_quality = listing_quality_score(item)
+    description_risk = analyze_description_risk(_description_text(item))
     market_speed = compute_market_speed(comparables, stats.median_price, stats)
     competition_pressure = competition_score(item, comparables, stats.median_price)
     competition_density = float(market_speed["competition_density"])
@@ -686,14 +708,15 @@ def _build_signals(
         capital_penalty=float(capital_efficiency["capital_penalty"]),
         capital_efficiency_details=capital_efficiency,
         urgency_score=urgency_score(item.title, item.price),
-        risk_score=risk_score(item, stats, category_filter),
-        listing_quality_score=float(listing_quality_score(item)["score"]),
-        description_risk_score=float(analyze_description_risk(_description_text(item))["score"]),
+        risk_score=risk_score(item, stats, category_filter)
+        + (2.5 if semantic_result.is_damaged_or_parts_only else 0.0),
+        listing_quality_score=float(listing_quality["score"]),
+        description_risk_score=float(description_risk["score"]),
         volatility_penalty=volatility_penalty(stats),
         liquidity_details=compute_liquidity(stats),
         market_speed_details=market_speed,
-        listing_quality_details=listing_quality_score(item),
-        description_risk_details=analyze_description_risk(_description_text(item)),
+        listing_quality_details=listing_quality,
+        description_risk_details=description_risk,
         category_filter_details={
             "category_filter_reason": category_filter.category_filter_reason,
             "category_risk_flags": category_filter.category_risk_flags,
@@ -733,6 +756,7 @@ def _build_evidence(
     discount_pct: float,
     signals: OpportunitySignals,
     comparables: list[Listing],
+    semantic_result: SemanticClassification,
 ) -> dict:
     item_price = float(item.price)
     category = detect_category(item.title, item.search_query or item.normalized_name)
@@ -747,12 +771,21 @@ def _build_evidence(
         "subcategory": subcategory,
         "comparable_key": comparable_key,
         "item_price": item_price,
+        "mean_price": stats.mean_price,
         "reference_price": stats.median_price,
         "median_price": stats.median_price,
+        "mode_price": stats.mode_price,
+        "mode_count": stats.mode_count,
         "p25": stats.p25,
         "p75": stats.p75,
         "spread": stats.spread,
         "volatility_ratio": stats.volatility_ratio,
+        "pricing_reference": {
+            "mean": stats.mean_price,
+            "median": stats.median_price,
+            "mode": stats.mode_price,
+            "mode_count": stats.mode_count,
+        },
         "price_position": price_position(item_price, stats),
         "underpricing_score": underpricing_score(item_price, stats),
         "comparable_count": stats.comparable_count,
@@ -785,6 +818,18 @@ def _build_evidence(
         "extreme_underprice_risk": has_extreme_underprice_risk(item_price, stats),
         "profit_estimate": profit_estimate,
         "discount_pct": discount_pct,
+        "semantic": {
+            "backend": semantic_result.backend,
+            "model_name": semantic_result.model_name,
+            "language_code": semantic_result.language_code,
+            "confidence": semantic_result.confidence,
+            "is_target_match": semantic_result.is_target_match,
+            "is_damaged_or_parts_only": semantic_result.is_damaged_or_parts_only,
+            "is_safe_listing": semantic_result.is_safe_listing,
+            "reason": semantic_result.reason,
+            "labels": list(semantic_result.labels),
+            "details": semantic_result.details,
+        },
         "prices_sample": stats.prices[:10],
         "listing_signals": {
             "has_image": bool(item.image_url),
@@ -853,6 +898,19 @@ def _percentile(sorted_values: list[float], percentile: float) -> float:
         (sorted_values[upper_index] - sorted_values[lower_index]) * fraction
     )
     return float(value)
+
+
+def _mode_bucket(prices: list[float], bucket_size: int = 10) -> tuple[float, int]:
+    if not prices:
+        return 0.0, 0
+
+    buckets: dict[int, int] = {}
+    for price in prices:
+        bucket = int(round(price / bucket_size) * bucket_size)
+        buckets[bucket] = buckets.get(bucket, 0) + 1
+
+    mode_bucket, mode_count = max(buckets.items(), key=lambda item: (item[1], -item[0]))
+    return float(mode_bucket), mode_count
 
 
 def _price_consistency_component(stats: MarketStats) -> float:

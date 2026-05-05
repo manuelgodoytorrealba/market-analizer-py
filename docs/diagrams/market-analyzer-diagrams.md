@@ -15,4 +15,5 @@ Este directorio contiene los diagramas principales de la arquitectura actual de 
 
 - Los diagramas reflejan la arquitectura actual del repo.
 - Los nombres de capas y servicios siguen los archivos reales del proyecto.
+- La capa semantica vive en `app/services/semantic_classifier.py`.
 - Si cambia el pipeline, actualiza primero `docs/architecture.md` y luego estos diagramas.

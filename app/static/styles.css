@@ -313,6 +313,28 @@ h4 {
     padding: 12px 14px;
 }
 
+.feedback-form {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.feedback-form select,
+.feedback-form textarea,
+.feedback-form button {
+    border: 1px solid var(--line);
+    background: rgba(9, 9, 15, 0.42);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font: inherit;
+}
+
+.feedback-form textarea {
+    resize: vertical;
+    min-height: 92px;
+}
+
 .filters-form button {
     background: linear-gradient(135deg, rgba(139, 92, 246, 0.34), rgba(99, 102, 241, 0.18));
     cursor: pointer;

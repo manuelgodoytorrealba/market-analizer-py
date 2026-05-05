@@ -1,6 +1,7 @@
 import argparse
 import sys
 import time
+from pathlib import Path
 from typing import cast
 
 import uvicorn
@@ -8,6 +9,7 @@ import uvicorn
 from app.core.config import get_settings
 from app.db.session import SessionLocal, init_db
 from app.models.entities import Listing, Opportunity
+from app.services.feedback import export_feedback_dataset
 from app.scrapers.wallapop import WallapopScraper
 from app.services.runtime import (
     CycleReport,
@@ -179,6 +181,20 @@ def _run_repair_wallapop_urls(_: argparse.Namespace) -> int:
     return 0
 
 
+def _run_export_feedback_dataset(args: argparse.Namespace) -> int:
+    init_db()
+    db = SessionLocal()
+    try:
+        output_path = export_feedback_dataset(db, args.output)
+    finally:
+        db.close()
+
+    _print_header("Feedback Dataset Exported")
+    print(f"output: {Path(output_path)}")
+    print("Use this JSONL as offline training input for the semantic classifier.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     settings = get_settings()
     parser = argparse.ArgumentParser(
@@ -227,6 +243,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Recalcula URLs públicas de listings Wallapop ya persistidos",
     )
     repair_urls_parser.set_defaults(handler=_run_repair_wallapop_urls)
+
+    export_feedback_parser = subparsers.add_parser(
+        "export-feedback-dataset",
+        help="Exporta feedback humano a JSONL para reentrenamiento offline",
+    )
+    export_feedback_parser.add_argument(
+        "--output",
+        default="data/training/listing_feedback.jsonl",
+        help="Ruta del fichero JSONL de salida",
+    )
+    export_feedback_parser.set_defaults(handler=_run_export_feedback_dataset)
 
     return parser
 

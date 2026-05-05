@@ -7,22 +7,26 @@
 ## Assumptions
 - Assumption: una listing barata no es automaticamente una compra.
 - Assumption: capital y validacion manual pueden bloquear una oportunidad buena.
+- Assumption: la capa semantica descarta accesorios, piezas y dañados antes de llegar al scorer.
 
 ## Diagram
 
 ```mermaid
 flowchart TD
-    A["Listing barato detectado"] --> B["Analyzer\n¿Hay comparables y profit estimado?"]
-    B -->|No| X["Descartar o dejar sin oportunidad"]
-    B -->|Si| C["BUY SHORTLIST\n¿Es una compra seriamente candidata?"]
-    C -->|No| Y["Rechazo con motivo"]
-    C -->|Si| D["CAPITAL STRATEGY\n¿Cabe en el bankroll actual?"]
-    D -->|No| Z["Rechazo por capital / prioridad"]
-    D -->|Si| E["DEAL VALIDATOR\nChecklist manual antes de pagar"]
-    E -->|Riesgo alto o evidencia debil| W["No ejecutar compra todavia"]
-    E -->|Checklist aceptable| F["Buy Plan accionable"]
+    A["Listing detectado"] --> B["Semantic layer\n¿Es el producto correcto y no está dañado?"]
+    B -->|No| X["Descartar o etiquetar como accesorio/piezas"]
+    B -->|Si| C["Analyzer\n¿Hay comparables y profit estimado?"]
+    C -->|No| Y["Descartar o dejar sin oportunidad"]
+    C -->|Si| D["BUY SHORTLIST\n¿Es una compra seriamente candidata?"]
+    D -->|No| Z["Rechazo con motivo"]
+    D -->|Si| E["CAPITAL STRATEGY\n¿Cabe en el bankroll actual?"]
+    E -->|No| W["Rechazo por capital / prioridad"]
+    E -->|Si| F["DEAL VALIDATOR\nChecklist manual antes de pagar"]
+    F -->|Riesgo alto o evidencia debil| G["No ejecutar compra todavia"]
+    F -->|Checklist aceptable| H["Buy Plan accionable"]
 ```
 
 ## Notes
 - Este flujo refleja la filosofia del producto.
 - La decision final no es solo matematica; tambien incluye riesgo y evidencia.
+- La semantica reduce ruido multilenguaje antes de gastar analisis de mercado.
