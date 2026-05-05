@@ -9,6 +9,8 @@
 
 ---
 
+It lives here http://192.168.1.10:8000
+
 ## ✨ Overview
 
 **Market Analyzer** es un sistema diseñado para detectar, analizar y validar oportunidades de reventa en marketplaces como Wallapop.

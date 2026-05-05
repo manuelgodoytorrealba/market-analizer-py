@@ -9,10 +9,13 @@
     {% endif %}
     <title>{% block title %}Market Analyzer{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}" />
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='images/favicon.ico') }}">
 </head>
 
 <body>
     <div class="app-shell">
+
+        <!-- SIDEBAR -->
         <aside class="sidebar glass">
             <div class="brand">
                 <div class="brand-mark">MA</div>
@@ -45,12 +48,20 @@
             </div>
         </aside>
 
+        <!-- MAIN -->
         <main class="main-panel">
+
+            <!-- TOPBAR -->
             <header class="topbar glass">
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    ☰
+                </button>
+
                 <div>
                     <p class="eyebrow">{% block eyebrow %}Inteligencia de mercado{% endblock %}</p>
                     <h2>{% block page_title %}Panel{% endblock %}</h2>
                 </div>
+
                 <div class="topbar-meta">
                     <span class="meta-pill">Flujo claro</span>
                     <span class="meta-pill">Señal explicable</span>
@@ -61,21 +72,46 @@
             </header>
 
             {% block content %}{% endblock %}
+
         </main>
     </div>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const autoSubmitForms = document.querySelectorAll("form[data-auto-submit='true']");
-        autoSubmitForms.forEach(function (form) {
-            const controls = form.querySelectorAll("select, input[type='checkbox']");
-            controls.forEach(function (control) {
-                control.addEventListener("change", function () {
-                    form.submit();
+
+    <!-- SCRIPTS -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // AUTO SUBMIT
+            const autoSubmitForms = document.querySelectorAll("form[data-auto-submit='true']");
+            autoSubmitForms.forEach(function (form) {
+                const controls = form.querySelectorAll("select, input[type='checkbox']");
+                controls.forEach(function (control) {
+                    control.addEventListener("change", function () {
+                        form.submit();
+                    });
                 });
             });
+
+            // SIDEBAR TOGGLE
+            const toggleBtn = document.getElementById("sidebar-toggle");
+            const sidebar = document.querySelector(".sidebar");
+
+            const overlay = document.createElement("div");
+            overlay.classList.add("sidebar-overlay");
+            document.body.appendChild(overlay);
+
+            toggleBtn.addEventListener("click", () => {
+                sidebar.classList.toggle("open");
+                overlay.classList.toggle("active");
+            });
+
+            overlay.addEventListener("click", () => {
+                sidebar.classList.remove("open");
+                overlay.classList.remove("active");
+            });
+
         });
-    });
-</script>
+    </script>
+
 </body>
 
 </html>
